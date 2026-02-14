@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Swap | THORChain</title>
+	<meta name="description" content="Swap Bitcoin, Ethereum, and other cryptocurrencies instantly with THORChain.">
+	<link rel="icon" href="favicon.png">
+	<link rel="stylesheet" href="css/swap-page.css">
+</head>
+<body class="swap-page">
+
+	<!-- Header -->
+	<header class="swap-page-header">
+		<div class="swap-header-inner">
+			<a href="index.html" class="swap-header-logo">
+				<img src="images/logos/full-dark.png" alt="THORChain" style="height:28px;">
+			</a>
+			<button class="swap-connect-btn">Connect Wallet</button>
+		</div>
+	</header>
+
+	<!-- Main Swap Interface -->
+	<div class="swap-page-main">
+		<div class="swap-card">
+			<div class="swap-card-title">Swap</div>
+
+			<!-- SELL -->
+			<div class="swap-asset-box">
+				<div class="swap-asset-label">You Pay</div>
+				<div class="swap-asset-row">
+					<div class="swap-asset-selector">
+						<img id="sellIcon" src="images/chains/BTC.svg" alt="">
+						<select id="sellAssetSelect">
+							<option value="BTC.BTC">BTC</option>
+							<option value="ETH.ETH">ETH</option>
+							<option value="BSC.BNB">BNB</option>
+							<option value="AVAX.AVAX">AVAX</option>
+							<option value="GAIA.ATOM">ATOM</option>
+							<option value="DOGE.DOGE">DOGE</option>
+							<option value="BCH.BCH">BCH</option>
+							<option value="LTC.LTC">LTC</option>
+							<option value="BASE.ETH">BASE</option>
+							<option value="XRP.XRP">XRP</option>
+							<option value="TRX.TRX">TRX</option>
+						</select>
+					</div>
+					<input type="number" id="sellAmount" class="swap-amount-input" placeholder="0" value="1" min="0" step="any">
+				</div>
+				<div class="swap-usd-row" id="sellUsd">Loading prices...</div>
+			</div>
+
+			<!-- Arrow -->
+			<div class="swap-arrow-container">
+				<button class="swap-arrow-btn" id="swapArrow" title="Flip assets">
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>
+					</svg>
+				</button>
+			</div>
+
+			<!-- BUY -->
+			<div class="swap-asset-box">
+				<div class="swap-asset-label">You Receive</div>
+				<div class="swap-asset-row">
+					<div class="swap-asset-selector">
+						<img id="buyIcon" src="images/chains/ETH.svg" alt="">
+						<select id="buyAssetSelect">
+							<option value="ETH.ETH">ETH</option>
+							<option value="BTC.BTC">BTC</option>
+							<option value="BSC.BNB">BNB</option>
+							<option value="AVAX.AVAX">AVAX</option>
+							<option value="GAIA.ATOM">ATOM</option>
+							<option value="DOGE.DOGE">DOGE</option>
+							<option value="BCH.BCH">BCH</option>
+							<option value="LTC.LTC">LTC</option>
+							<option value="BASE.ETH">BASE</option>
+							<option value="XRP.XRP">XRP</option>
+							<option value="TRX.TRX">TRX</option>
+						</select>
+					</div>
+					<div style="flex:1;text-align:right;">
+						<div id="buyEstimate" style="font-size:24px;font-weight:700;color:#fff;">0</div>
+					</div>
+				</div>
+				<div class="swap-usd-row" id="buyUsd">≈ $0.00</div>
+			</div>
+
+			<!-- Swap Button -->
+			<button id="swapBtn" class="swap-execute-btn" disabled>
+				<span class="swap-spinner"></span> Loading prices...
+			</button>
+
+			<!-- Results Area -->
+			<div id="resultArea"></div>
+		</div>
+	</div>
+
+	<!-- Footer -->
+	<footer class="swap-page-footer">
+		<div class="swap-footer-inner">
+			<span>THORChain — Decentralized Cross-Chain Swaps</span>
+			<div style="display:flex;gap:16px;">
+				<a href="https://thorchain.org/privacy-policy" target="_blank">Privacy</a>
+				<a href="https://thorchain.org/terms-of-use" target="_blank">Terms</a>
+				<a href="https://docs.thorchain.org/" target="_blank">Docs</a>
+			</div>
+		</div>
+	</footer>
+
+	<script src="js/swap-page.js"></script>
+</body>
+</html>
