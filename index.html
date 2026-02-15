@@ -150,71 +150,75 @@
 						</div>
 
 						<!-- ═══════════════════════════════════════════ -->
-						<!-- SWAP QUOTE WIDGET (UPDATED WITH THRESHOLD) -->
-						<!-- ═══════════════════════════════════════════ -->
-						<div class="flex-1 justify-content-right">
-							<div class="app-container svelte-2em7m7">
-								<div class="swap-container svelte-2em7m7">
-									<div class="header svelte-2em7m7">
-										<img src="images/coins/thorchain-rune-logo.svg" alt="THORChain Logo" class="svelte-2em7m7">
-										<div class="header-title svelte-2em7m7">THORChain Swap Quote</div>
-									</div>
-									<div class="divider svelte-2em7m7"></div>
-									<div class="asset-selection svelte-2em7m7">
-										<div class="asset-label-container svelte-2em7m7">
-											<label class="asset-label svelte-2em7m7">From:</label>
-											<label class="asset-label svelte-2em7m7">To:</label>
-										</div>
-										<div class="swap-select-row">
-											<div class="swap-select-wrapper">
-												<img id="fromIcon" src="images/chains/BTC.svg" alt="" class="swap-chain-icon">
-												<select id="fromAsset" class="swap-select">
-													<option value="bitcoin">Bitcoin (BTC)</option>
-													<option value="ethereum">Ethereum (ETH)</option>
-													<option value="bnb">BNB Chain (BNB)</option>
-													<option value="avalanche">Avalanche (AVAX)</option>
-													<option value="cosmos">Cosmos Hub (ATOM)</option>
-													<option value="dogecoin">Dogecoin (DOGE)</option>
-													<option value="bitcoincash">Bitcoin Cash (BCH)</option>
-													<option value="litecoin">Litecoin (LTC)</option>
-													<option value="base">Base (ETH)</option>
-													<option value="ripple">Ripple (XRP)</option>
-													<option value="tron">TRON (TRX)</option>
-												</select>
-											</div>
-											<div class="swap-select-wrapper">
-												<img id="toIcon" src="images/chains/ETH.svg" alt="" class="swap-chain-icon">
-												<select id="toAsset" class="swap-select">
-													<option value="ethereum">Ethereum (ETH)</option>
-													<option value="bitcoin">Bitcoin (BTC)</option>
-													<option value="bnb">BNB Chain (BNB)</option>
-													<option value="avalanche">Avalanche (AVAX)</option>
-													<option value="cosmos">Cosmos Hub (ATOM)</option>
-													<option value="dogecoin">Dogecoin (DOGE)</option>
-													<option value="bitcoincash">Bitcoin Cash (BCH)</option>
-													<option value="litecoin">Litecoin (LTC)</option>
-													<option value="base">Base (ETH)</option>
-													<option value="ripple">Ripple (XRP)</option>
-													<option value="tron">TRON (TRX)</option>
-												</select>
-											</div>
-										</div>
-										<div class="expand svelte-2em7m7">
-											<label style="margin-top: 12px;" class="svelte-2em7m7">Swap Amount (<span id="fromSymbol">BTC</span>):</label>
-											<div class="amount-input-container svelte-2em7m7">
-												<div class="amount-input-wrapper svelte-2em7m7">
-													<input type="number" id="swapAmount" class="input-with-usd svelte-2em7m7" placeholder="Enter amount" value="1" min="0" step="any">
-												</div>
-											</div>
-											<div id="usdEstimate">≈ Fetching price...</div>
-										</div>
-										<button id="getQuoteBtn" class="svelte-2em7m7">Get Quote</button>
-										<div id="swapResult" style="display: none;"></div>
-									</div>
-								</div>
-							</div>
-						</div>
-						<!-- ═══════════════════════════════════════════ -->
+<!-- SWAP QUOTE WIDGET (IMPROVED DESIGN) -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="flex-1 flex justify-center lg:justify-end">
+	<div style="width:100%;max-width:420px;">
+		<div style="background:rgba(28,31,38,0.95);border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:24px;backdrop-filter:blur(12px);">
+			<!-- Header -->
+			<div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
+				<img src="images/coins/thorchain-rune-logo.svg" alt="THORChain" style="width:28px;height:28px;">
+				<span style="font-size:15px;font-weight:700;color:#fff;">THORChain Swap Quote</span>
+			</div>
+
+			<!-- From / To selectors -->
+			<div style="display:flex;gap:8px;margin-bottom:16px;">
+				<div style="flex:1;">
+					<label style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;display:block;">From</label>
+					<div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:8px 12px;">
+						<img id="fromIcon" src="images/chains/BTC.svg" alt="" style="width:22px;height:22px;border-radius:50%;">
+						<select id="fromAsset" style="flex:1;background:transparent;border:none;color:#fff;font-size:13px;font-weight:600;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;">
+							<option value="bitcoin" style="background:#1c1f26;color:#fff;">Bitcoin (BTC)</option>
+							<option value="ethereum" style="background:#1c1f26;color:#fff;">Ethereum (ETH)</option>
+							<option value="bnb" style="background:#1c1f26;color:#fff;">BNB Chain (BNB)</option>
+							<option value="avalanche" style="background:#1c1f26;color:#fff;">Avalanche (AVAX)</option>
+							<option value="cosmos" style="background:#1c1f26;color:#fff;">Cosmos Hub (ATOM)</option>
+							<option value="dogecoin" style="background:#1c1f26;color:#fff;">Dogecoin (DOGE)</option>
+							<option value="bitcoincash" style="background:#1c1f26;color:#fff;">Bitcoin Cash (BCH)</option>
+							<option value="litecoin" style="background:#1c1f26;color:#fff;">Litecoin (LTC)</option>
+							<option value="base" style="background:#1c1f26;color:#fff;">Base (ETH)</option>
+							<option value="ripple" style="background:#1c1f26;color:#fff;">Ripple (XRP)</option>
+							<option value="tron" style="background:#1c1f26;color:#fff;">TRON (TRX)</option>
+						</select>
+					</div>
+				</div>
+				<div style="flex:1;">
+					<label style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;display:block;">To</label>
+					<div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:8px 12px;">
+						<img id="toIcon" src="images/chains/ETH.svg" alt="" style="width:22px;height:22px;border-radius:50%;">
+						<select id="toAsset" style="flex:1;background:transparent;border:none;color:#fff;font-size:13px;font-weight:600;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;">
+							<option value="ethereum" style="background:#1c1f26;color:#fff;">Ethereum (ETH)</option>
+							<option value="bitcoin" style="background:#1c1f26;color:#fff;">Bitcoin (BTC)</option>
+							<option value="bnb" style="background:#1c1f26;color:#fff;">BNB Chain (BNB)</option>
+							<option value="avalanche" style="background:#1c1f26;color:#fff;">Avalanche (AVAX)</option>
+							<option value="cosmos" style="background:#1c1f26;color:#fff;">Cosmos Hub (ATOM)</option>
+							<option value="dogecoin" style="background:#1c1f26;color:#fff;">Dogecoin (DOGE)</option>
+							<option value="bitcoincash" style="background:#1c1f26;color:#fff;">Bitcoin Cash (BCH)</option>
+							<option value="litecoin" style="background:#1c1f26;color:#fff;">Litecoin (LTC)</option>
+							<option value="base" style="background:#1c1f26;color:#fff;">Base (ETH)</option>
+							<option value="ripple" style="background:#1c1f26;color:#fff;">Ripple (XRP)</option>
+							<option value="tron" style="background:#1c1f26;color:#fff;">TRON (TRX)</option>
+						</select>
+					</div>
+				</div>
+			</div>
+
+			<!-- Amount -->
+			<div style="margin-bottom:16px;">
+				<label style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;display:block;">Swap Amount (<span id="fromSymbol">BTC</span>)</label>
+				<input type="number" id="swapAmount" placeholder="Enter amount" value="1" min="0" step="any" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px 14px;color:#fff;font-size:15px;font-weight:600;outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='#22c55e'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+				<div id="usdEstimate" style="color:#22c55e;font-size:12px;margin-top:4px;text-align:right;font-weight:600;">≈ Fetching price...</div>
+			</div>
+
+			<!-- Get Quote Button -->
+			<button id="getQuoteBtn" style="width:100%;padding:12px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;transition:transform 0.15s,box-shadow 0.2s;" onmouseover="this.style.transform='scale(1.02)';this.style.boxShadow='0 4px 16px rgba(34,197,94,0.3)'" onmouseout="this.style.transform='scale(1)';this.style.boxShadow='none'">Get Quote</button>
+
+			<!-- Result -->
+			<div id="swapResult" style="display:none;margin-top:16px;"></div>
+		</div>
+	</div>
+</div>
+<!-- ═══════════════════════════════════════════ -->
 
 					</div>
 				</section>
