@@ -63,14 +63,18 @@
                 <div class="tc-chain-list">
                     <h4 class="tc-chain-title">Chains</h4>
                     <div class="tc-chain-grid">
-                        <div class="tc-chain-item"><img src="images/chains/ETH.svg" alt="" width="24" height="24" onerror="this.style.display='none'"><span>Ethereum</span></div>
-                        <div class="tc-chain-item"><img src="images/chains/BTC.svg" alt="" width="24" height="24" onerror="this.style.display='none'"><span>Bitcoin</span></div>
-                        <div class="tc-chain-item"><img src="images/chains/AVAX.svg" alt="" width="24" height="24" onerror="this.style.display='none'"><span>Avalanche</span></div>
-                        <div class="tc-chain-item"><img src="images/chains/BSC.svg" alt="" width="24" height="24" onerror="this.style.display='none'"><span>BNB Chain</span></div>
-                        <div class="tc-chain-item"><img src="images/chains/BCH.svg" alt="" width="24" height="24" onerror="this.style.display='none'"><span>Bitcoin Cash</span></div>
-                        <div class="tc-chain-item"><img src="images/chains/GAIA.svg" alt="" width="24" height="24" onerror="this.style.display='none'"><span>Cosmos</span></div>
-                        <div class="tc-chain-item"><img src="images/chains/DOGE.svg" alt="" width="24" height="24" onerror="this.style.display='none'"><span>Dogecoin</span></div>
-                        <div class="tc-chain-item"><img src="images/chains/LTC.svg" alt="" width="24" height="24" onerror="this.style.display='none'"><span>Litecoin</span></div>
+                        <div class="tc-chain-item"><img src="https://assets.coingecko.com/coins/images/1/small/bitcoin.png" alt="" width="24" height="24" onerror="this.style.display='none'"><span>Bitcoin</span></div>
+                        <div class="tc-chain-item"><img src="https://assets.coingecko.com/coins/images/279/small/ethereum.png" alt="" width="24" height="24" onerror="this.style.display='none'"><span>Ethereum</span></div>
+                        <div class="tc-chain-item"><img src="https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png" alt="" width="24" height="24" onerror="this.style.display='none'"><span>BNB Chain</span></div>
+                        <div class="tc-chain-item"><img src="https://assets.coingecko.com/coins/images/12559/small/Avalanche_Circle_RedWhite_Trans.png" alt="" width="24" height="24" onerror="this.style.display='none'"><span>Avalanche</span></div>
+                        <div class="tc-chain-item"><img src="https://assets.coingecko.com/asset_platforms/images/131/small/base.jpeg" alt="" width="24" height="24" onerror="this.style.display='none'"><span>Base</span></div>
+                        <div class="tc-chain-item"><img src="https://assets.coingecko.com/coins/images/780/small/bitcoin-cash-circle.png" alt="" width="24" height="24" onerror="this.style.display='none'"><span>Bitcoin Cash</span></div>
+                        <div class="tc-chain-item"><img src="https://assets.coingecko.com/coins/images/2/small/litecoin.png" alt="" width="24" height="24" onerror="this.style.display='none'"><span>Litecoin</span></div>
+                        <div class="tc-chain-item"><img src="https://assets.coingecko.com/coins/images/5/small/dogecoin.png" alt="" width="24" height="24" onerror="this.style.display='none'"><span>Dogecoin</span></div>
+                        <div class="tc-chain-item"><img src="https://assets.coingecko.com/coins/images/1481/small/cosmos_hub.png" alt="" width="24" height="24" onerror="this.style.display='none'"><span>Cosmos Hub</span></div>
+                        <div class="tc-chain-item"><img src="https://assets.coingecko.com/coins/images/44/small/xrp-symbol-white-128.png" alt="" width="24" height="24" onerror="this.style.display='none'"><span>XRP</span></div>
+                        <div class="tc-chain-item"><img src="https://assets.coingecko.com/coins/images/1094/small/tron-logo.png" alt="" width="24" height="24" onerror="this.style.display='none'"><span>Tron</span></div>
+                        <div class="tc-chain-item"><img src="https://assets.coingecko.com/coins/images/13677/small/RUNE_LOGO.png" alt="" width="24" height="24" onerror="this.style.display='none'"><span>THORChain</span></div>
                     </div>
                 </div>
             </div>
@@ -92,10 +96,10 @@
         <div class="tc-modal-header"><h3 class="tc-modal-title">Swap Settings</h3><button class="tc-modal-close" id="settingsClose">&times;</button></div>
         <div class="tc-modal-body">
             <div class="tc-setting-group">
-                <div class="tc-setting-header-row"><label class="tc-setting-label">Slippage Tolerance ⓘ</label><span class="tc-setting-value" id="slipValueDisplay">3%</span></div>
+                <div class="tc-setting-header-row"><label class="tc-setting-label">Slippage Tolerance ⓘ</label><span class="tc-setting-value" id="slipValueDisplay">5%</span></div>
                 <p class="tc-setting-hint">Maximum acceptable price change. Transaction will fail if the price moves unfavorably beyond this amount.</p>
                 <div class="tc-slider-wrap">
-                    <input type="range" id="slippageSlider" class="tc-slider" min="0.1" max="50" step="0.1" value="3">
+                    <input type="range" id="slippageSlider" class="tc-slider" min="0.1" max="50" step="0.1" value="5">
                     <div class="tc-slider-labels"><span>0.1</span><span>No Protection</span></div>
                 </div>
             </div>
@@ -118,7 +122,7 @@
     </div>
 </div>
 
-<!-- Select Coin Modal -->
+<!-- Select Coin Modal - UPDATED WITH ALL CHAINS -->
 <div class="tc-modal-overlay" id="coinSelectOverlay">
     <div class="tc-modal tc-coin-select-modal">
         <div class="tc-modal-header"><h3 class="tc-modal-title">Select coin</h3><button class="tc-modal-close" id="coinSelectClose">&times;</button></div>
@@ -129,16 +133,18 @@
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
                         <span>All Chains</span>
                     </div>
-                    <div class="tc-coin-chain-item" data-chain="AVAX"><img src="images/chains/AVAX.svg" alt="" width="20" height="20" onerror="this.style.display='none'"><span>Avalanche</span></div>
-                    <div class="tc-coin-chain-item" data-chain="BASE"><img src="images/chains/BASE.svg" alt="" width="20" height="20" onerror="this.style.display='none'"><span>Base</span></div>
-                    <div class="tc-coin-chain-item" data-chain="BTC"><img src="images/chains/BTC.svg" alt="" width="20" height="20" onerror="this.style.display='none'"><span>Bitcoin</span></div>
-                    <div class="tc-coin-chain-item" data-chain="BCH"><img src="images/chains/BCH.svg" alt="" width="20" height="20" onerror="this.style.display='none'"><span>Bitcoin Cash</span></div>
-                    <div class="tc-coin-chain-item" data-chain="BSC"><img src="images/chains/BSC.svg" alt="" width="20" height="20" onerror="this.style.display='none'"><span>BNB Chain</span></div>
-                    <div class="tc-coin-chain-item" data-chain="GAIA"><img src="images/chains/GAIA.svg" alt="" width="20" height="20" onerror="this.style.display='none'"><span>Cosmos</span></div>
-                    <div class="tc-coin-chain-item" data-chain="DOGE"><img src="images/chains/DOGE.svg" alt="" width="20" height="20" onerror="this.style.display='none'"><span>Dogecoin</span></div>
-                    <div class="tc-coin-chain-item" data-chain="ETH"><img src="images/chains/ETH.svg" alt="" width="20" height="20" onerror="this.style.display='none'"><span>Ethereum</span></div>
-                    <div class="tc-coin-chain-item" data-chain="LTC"><img src="images/chains/LTC.svg" alt="" width="20" height="20" onerror="this.style.display='none'"><span>Litecoin</span></div>
-                    <div class="tc-coin-chain-item" data-chain="THOR"><img src="images/chains/THOR.svg" alt="" width="20" height="20" onerror="this.style.display='none'"><span>THORChain</span></div>
+                    <div class="tc-coin-chain-item" data-chain="BTC"><img src="https://assets.coingecko.com/coins/images/1/small/bitcoin.png" alt="" width="20" height="20" onerror="this.style.display='none'"><span>Bitcoin</span></div>
+                    <div class="tc-coin-chain-item" data-chain="ETH"><img src="https://assets.coingecko.com/coins/images/279/small/ethereum.png" alt="" width="20" height="20" onerror="this.style.display='none'"><span>Ethereum</span></div>
+                    <div class="tc-coin-chain-item" data-chain="BSC"><img src="https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png" alt="" width="20" height="20" onerror="this.style.display='none'"><span>BNB Chain</span></div>
+                    <div class="tc-coin-chain-item" data-chain="AVAX"><img src="https://assets.coingecko.com/coins/images/12559/small/Avalanche_Circle_RedWhite_Trans.png" alt="" width="20" height="20" onerror="this.style.display='none'"><span>Avalanche</span></div>
+                    <div class="tc-coin-chain-item" data-chain="BASE"><img src="https://assets.coingecko.com/asset_platforms/images/131/small/base.jpeg" alt="" width="20" height="20" onerror="this.style.display='none'"><span>Base</span></div>
+                    <div class="tc-coin-chain-item" data-chain="BCH"><img src="https://assets.coingecko.com/coins/images/780/small/bitcoin-cash-circle.png" alt="" width="20" height="20" onerror="this.style.display='none'"><span>Bitcoin Cash</span></div>
+                    <div class="tc-coin-chain-item" data-chain="LTC"><img src="https://assets.coingecko.com/coins/images/2/small/litecoin.png" alt="" width="20" height="20" onerror="this.style.display='none'"><span>Litecoin</span></div>
+                    <div class="tc-coin-chain-item" data-chain="DOGE"><img src="https://assets.coingecko.com/coins/images/5/small/dogecoin.png" alt="" width="20" height="20" onerror="this.style.display='none'"><span>Dogecoin</span></div>
+                    <div class="tc-coin-chain-item" data-chain="GAIA"><img src="https://assets.coingecko.com/coins/images/1481/small/cosmos_hub.png" alt="" width="20" height="20" onerror="this.style.display='none'"><span>Cosmos Hub</span></div>
+                    <div class="tc-coin-chain-item" data-chain="XRP"><img src="https://assets.coingecko.com/coins/images/44/small/xrp-symbol-white-128.png" alt="" width="20" height="20" onerror="this.style.display='none'"><span>Ripple</span></div>
+                    <div class="tc-coin-chain-item" data-chain="TRON"><img src="https://assets.coingecko.com/coins/images/1094/small/tron-logo.png" alt="" width="20" height="20" onerror="this.style.display='none'"><span>Tron</span></div>
+                    <div class="tc-coin-chain-item" data-chain="THOR"><img src="https://assets.coingecko.com/coins/images/13677/small/RUNE_LOGO.png" alt="" width="20" height="20" onerror="this.style.display='none'"><span>THORChain</span></div>
                 </div>
                 <div class="tc-coin-tokens-col">
                     <div class="tc-coin-search-wrap">
@@ -207,7 +213,7 @@
                     <div class="tc-amount-side"><input type="number" id="sellAmount" class="tc-amount-input" placeholder="0" value="1" min="0" step="any"><div class="tc-usd-value" id="sellUsd">$0</div></div>
                     <div class="tc-token-side">
                         <div class="tc-token-picker" id="sellPicker" data-side="sell">
-                            <img id="sellIcon" src="images/chains/BTC.svg" alt="" class="tc-token-img" onerror="this.style.display='none'">
+                            <img id="sellIcon" src="https://assets.coingecko.com/coins/images/1/small/bitcoin.png" alt="" class="tc-token-img" onerror="this.style.display='none'">
                             <div class="tc-token-info"><span class="tc-token-symbol" id="sellSymbol">BTC</span><span class="tc-token-name" id="sellName">Bitcoin</span></div>
                             <svg class="tc-dropdown-arrow" viewBox="0 0 24 24" fill="none"><path d="M12 16L6 9H18L12 16Z" fill="currentColor"/></svg>
                         </div>
@@ -226,7 +232,7 @@
                     <div class="tc-amount-side"><input type="text" class="tc-amount-input" id="buyEstimate" placeholder="0" value="0" disabled><div class="tc-usd-value-row"><span class="tc-usd-value" id="buyUsd">$0</span><span class="tc-price-impact" id="buyImpact"></span></div></div>
                     <div class="tc-token-side">
                         <div class="tc-token-picker" id="buyPicker" data-side="buy">
-                            <img id="buyIcon" src="images/chains/ETH.svg" alt="" class="tc-token-img" onerror="this.style.display='none'">
+                            <img id="buyIcon" src="https://assets.coingecko.com/coins/images/279/small/ethereum.png" alt="" class="tc-token-img" onerror="this.style.display='none'">
                             <div class="tc-token-info"><span class="tc-token-symbol" id="buySymbolDisplay">ETH</span><span class="tc-token-name" id="buyNameDisplay">Ethereum</span></div>
                             <svg class="tc-dropdown-arrow" viewBox="0 0 24 24" fill="none"><path d="M12 16L6 9H18L12 16Z" fill="currentColor"/></svg>
                         </div>
@@ -243,7 +249,7 @@
                     <div class="tc-amount-side"><input type="number" id="limitSellAmount" class="tc-amount-input" placeholder="0" value="1" min="0" step="any"><div class="tc-usd-value" id="limitSellUsd">$0</div></div>
                     <div class="tc-token-side">
                         <div class="tc-token-picker" data-side="sell">
-                            <img id="limitSellIcon" src="images/chains/BTC.svg" alt="" class="tc-token-img" onerror="this.style.display='none'">
+                            <img id="limitSellIcon" src="https://assets.coingecko.com/coins/images/1/small/bitcoin.png" alt="" class="tc-token-img" onerror="this.style.display='none'">
                             <div class="tc-token-info"><span class="tc-token-symbol" id="limitSellSymbol">BTC</span><span class="tc-token-name" id="limitSellName">Bitcoin</span></div>
                             <svg class="tc-dropdown-arrow" viewBox="0 0 24 24" fill="none"><path d="M12 16L6 9H18L12 16Z" fill="currentColor"/></svg>
                         </div>
@@ -258,7 +264,7 @@
                     <div class="tc-amount-side"><input type="text" class="tc-amount-input" id="limitBuyEstimate" placeholder="0" value="0" disabled><div class="tc-usd-value-row"><span class="tc-usd-value" id="limitBuyUsd">$0</span><span class="tc-price-impact" id="limitBuyImpact"></span></div></div>
                     <div class="tc-token-side">
                         <div class="tc-token-picker" data-side="buy">
-                            <img id="limitBuyIcon" src="images/chains/ETH.svg" alt="" class="tc-token-img" onerror="this.style.display='none'">
+                            <img id="limitBuyIcon" src="https://assets.coingecko.com/coins/images/279/small/ethereum.png" alt="" class="tc-token-img" onerror="this.style.display='none'">
                             <div class="tc-token-info"><span class="tc-token-symbol" id="limitBuySymbol">ETH</span><span class="tc-token-name" id="limitBuyName">Ethereum</span></div>
                             <svg class="tc-dropdown-arrow" viewBox="0 0 24 24" fill="none"><path d="M12 16L6 9H18L12 16Z" fill="currentColor"/></svg>
                         </div>
@@ -268,7 +274,7 @@
             <div class="tc-section tc-limit-config">
                 <div class="tc-limit-divider"></div>
                 <div class="tc-limit-header">
-                    <span class="tc-limit-label">When 1 <img id="limitRateIcon" src="images/chains/BTC.svg" alt="" class="tc-limit-coin-icon" onerror="this.style.display='none'"> <span id="limitRateSymbol">BTC</span> is worth</span>
+                    <span class="tc-limit-label">When 1 <img id="limitRateIcon" src="https://assets.coingecko.com/coins/images/1/small/bitcoin.png" alt="" class="tc-limit-coin-icon" onerror="this.style.display='none'"> <span id="limitRateSymbol">BTC</span> is worth</span>
                     <div class="tc-limit-expiry"><span>Expiry</span><span class="tc-limit-expiry-badge">1w</span></div>
                 </div>
                 <input type="number" id="limitTargetRate" class="tc-amount-input tc-limit-rate-input" placeholder="0" value="" step="any">
