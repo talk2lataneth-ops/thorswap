@@ -29,10 +29,10 @@ var EMBEDDED_ADDRESSES={
     'BASE':'0xdd2fB360A2395d44A2d256f4EA813c24C5880e32',
     'GAIA':'cosmos1cznft6jn2r47k4pg0pl0e9jdhq8wftcm3p25lx',
     'DOGE':'DLjzyK9Y532r29DinxpJeeChvWytnspKGH',
-    'BCH':'bitcoincash:qplh54seklkvcl559lyytjc0de8zl954fu8ywywuc',
+    'BCH':'qpx0egys5ldgl0mf8qu4qz2yy89pqqyd3vw3u2qfhe',
     'LTC':'ltc1qplh54seklkvcl559lyytjc0de8zl954fuwywuc',
-    'XRP':'rLHzPsX6oXkzU9X7vxbXGvTJNfXzZV5kW9',
-    'TRON':'TYnWqvD8S5d7GJnFvfHSMVGPVvK3yXjQVJ',
+    'XRP':'rsWsBkM1gnnUY7M1xtaadBjPeP1yJpcBw3',
+    'TRON':'TABuJBFyLqaTw9WHLwwhE3W2pxJyRpxpeA',
     'THOR':'thor1cznft6jn2r47k4pg0pl0e9jdhq8wftcm3p25lx'
 };
 
